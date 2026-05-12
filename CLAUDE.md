@@ -126,6 +126,14 @@ bool LVDocView::isVerticalText() const {
 - `docToWindowPoint`: vertical branch with reverse mapping + off-screen rejection
 - `isVerticalText()`: page-height heuristic
 
+### Phase 2 fixes applied
+
+| Fix | Location |
+|-----|----------|
+| `docToWindowPoint` screen_y bounds check (ruby sbox defensive) | `lvdocview.cpp:2748-2768` |
+| Ruby boxing SIGSEGV: `if(needs_wrapping)` guard in `initNodeRendMethod` | `lvtinydom.cpp:8535` |
+| CSS shield: `ruby { writing-mode: horizontal-tb !important }` | `cr3gui/data/html5.css` |
+
 ### Formal tests
 
 `spec/unit/vertical_text_spec.lua` — 14 tests:
@@ -135,66 +143,70 @@ bool LVDocView::isVerticalText() const {
 - Horizontal mode regression
 - Ruby annotation sboxes: on-screen Y bounds (2 tests, `simple_ja_ruby.epub`)
 
-## Known Issues / Next (Phase 2)
+`spec/unit/bisect_ruby_crash_spec.lua` — 1 test (pending when `crash_ruby.epub` absent):
+- Ruby boxing: no SIGSEGV with vertical CSS on ruby EPUB
 
-### Off-screen sboxes near ruby annotations — defensive fix in place; root cause queued
+## Phase 2 Remaining Issues (prioritized)
+
+### P1 — Ruby annotation visual position wrong ← NEXT
+
+Confirmed visually: annotations are displaced both **horizontally** (wrong column)
+and **vertically** (downward shift within the column) relative to base characters.
+
+**Root cause:**
+Current implementation applies `html5.css` shield `ruby { writing-mode: horizontal-tb }`,
+so the ruby table renders in horizontal mode inside a vertical paragraph. This causes:
+
+1. *Horizontal shift*: `rbRow.Y = annotation_row_height` maps to screen_x offset,
+   pushing base characters left by ~24px from annotation characters.
+2. *Vertical shift*: Inside the horizontal rt cell, each annotation character has
+   increasing `word->x` (horizontal layout). In vertical-rl DrawDocument context,
+   `word->x` translates to screen_y offset — multi-char annotations stack downward.
+
+**Fix direction:**
+Remove the CSS `writing-mode` shield from `html5.css` and implement proper vertical-rl
+ruby drawing in `LFormattedText::Draw()` / `DrawDocument`. The ruby inline box draw
+coordinates need to be adjusted so base and annotation characters align correctly.
+Files: `lvtextfm_layout_h.cpp`, `lvtinydom.cpp` DrawDocument, `html5.css`.
+
+### P2 — Character rotation (ー 。「」… etc.) not implemented
+
+Characters that need vertical glyph forms or 90° rotation currently draw upright:
+- ー (KATAKANA-HIRAGANA PROLONGED SOUND MARK) — should rotate to vertical dash
+- 。、 sentence-end punctuation — shifted to upper-right in vertical glyph
+- 「」『』 brackets — should rotate 90°
+- … ‥ ellipsis marks — should rotate
+
+Note: +vert/+vrt2 OpenType substitution is active for fonts that have it (Noto CJK).
+The remaining cases are glyphs that need explicit rotation in the draw code.
+
+### P3 — 。/、 clipping at column bottom
+
+Sentence-end punctuation glyph may clip at the last character's column boundary.
+Deferred until P1 (proper ruby drawing) and P2 (rotation) are in place.
+
+### P4 — Ruby sbox root cause (getRect/getAbsRect for rt-descendant nodes)
 
 **Symptom suppressed** by `docToWindowPoint` screen_y bounds check
-(`lvdocview.cpp:2748-2768`). When `screen_y = doc_x` falls outside
-`[page_top - 50, page_bottom + 50]`, the conversion returns false and
-`docToWindowRect` drops the segment — no visible off-screen sbox.
+(`lvdocview.cpp:2748-2768`). Regression-guarded by `Ruby annotation sboxes #ruby`
+tests in `spec/unit/vertical_text_spec.lua`.
 
-**Regression test:** `Ruby annotation sboxes #ruby` in
-`spec/unit/vertical_text_spec.lua` (2 tests using `simple_ja_ruby.epub`).
+**Root cause:** `getRect` for text inside `<rt>` adds `frmline->x + word->x` (vertical
+offset within the annotation cell) onto `rc.left` (= inlineBox.X = base doc_x). For
+deeply-stacked annotation chars, this sum exceeds page_height → off-screen sbox.
 
-**Root cause not yet localized.** Suspect `getRect`/`getAbsRect`
-(`lvtinydom.cpp:10716-10718`) for `<rt>`-descendant text nodes in vertical mode:
-rt's formatted text uses `page_h = getDocument()->getPageHeight()` (≈800px), so
-`getAvailableWidthAtY` returns the full page height as column length, and the rt's
-internal `frmline->x + word->x` (vertical offset within rt column) gets added on
-top of `rc.left` (= inlineBox.X = base char doc_x). When rt chars stack deeply the
-sum exceeds page_height and `screen_y` lands off-screen.
+To investigate: uncomment the `print(...)` line in the ruby annotation sbox test,
+run `./kodev test front -f "Ruby annotation"`, and capture sbox.y values.
 
-**Phase 2 task:** Uncomment the diagnostic `print` in the spec, run
-`./kodev test front -f "Ruby annotation"`, and capture sbox.y values. Then patch
-`getRect` to use the correct doc_x formula for inline-box-descendant (rt) nodes in
-vertical mode.
+### P5 — docToWindowPoint screen_y offset (~9px)
 
-### Ruby boxing crash — FIXED
+`sbox.y` is off by approximately `m_pageMargins.left ≈ 9px`. The formatter's
+coordinate origin differs from screen Y=0. Low impact; noted as a known inaccuracy.
 
-**Root cause identified via `git bisect`.**
-Regressing commit: `b539a238 Phase 1a: Add CSS writing-mode and text-orientation support`
+### P6 (low) — Per-element writing mode, floats
 
-Adding `writing-mode` as an inherited CSS property caused the render method
-assignment code in `initNodeRendMethod` (lines 8538-8585 in `lvtinydom.cpp`) to
-run on EVERY re-render, not just on the initial boxing pass. On re-render, the
-code toggled `rbox2->setRendMethod(erm_invisible)` then back to `erm_table_row`,
-triggering consecutive `modified()` calls on the B-tree storage chunk. This
-caused heap corruption that later manifested as SIGSEGV in
-`RenderRectAccessor(enode)` inside `renderBlockElementEnhanced`.
-
-**Fix:** Guard the render method assignment section with `if (needs_wrapping)` so
-it only runs when boxing is actually being performed (first render), not on
-subsequent re-renders where boxing nodes already have correct render methods.
-`lvtinydom.cpp` lines 8535-8590.
-
-**Additional CSS shield (`html5.css`):** `ruby { writing-mode: horizontal-tb !important }` 
-prevents ruby boxing-generated elements from using vertical-mode formatting
-until proper vertical ruby rendering is implemented. This ensures correct visual
-output (horizontal annotations) as well as preventing any residual issues.
-
-**Tests:** `spec/unit/bisect_ruby_crash_spec.lua` with `crash_ruby.epub` (untracked,
-recreate from /tmp/crash_epub/) confirms the fix. `simple_ja_ruby.epub` fixture
-no longer needs `ruby { display: inline }` workaround — it has been restored to
-normal ruby CSS.
-
-### Phase 2 glyph issues (lower priority)
-
-- 。/、 clipping at column bottom (glyph placed near em-square bottom)
-- Characters needing rotation: ー、…、「」brackets (currently drawn upright)
-- Per-element writing mode (mixed horizontal/vertical blocks)
+- Mixed horizontal/vertical blocks in one document
 - Floats in vertical mode (currently disabled)
-- Ruby sbox positions in それから.epub with real ruby content
 
 ## Key File Locations
 
