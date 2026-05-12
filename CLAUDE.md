@@ -132,7 +132,10 @@ bool LVDocView::isVerticalText() const {
 |-----|----------|
 | `docToWindowPoint` screen_y bounds check (ruby sbox defensive) | `lvdocview.cpp:2748-2768` |
 | Ruby boxing SIGSEGV: `if(needs_wrapping)` guard in `initNodeRendMethod` | `lvtinydom.cpp:8535` |
-| CSS shield: `ruby { writing-mode: horizontal-tb !important }` | `cr3gui/data/html5.css` |
+| CSS shield removed (`ruby { writing-mode: horizontal-tb }` was the old workaround) | `cr3gui/data/html5.css` |
+| Code-level writing-mode shield removed from `renderBlockElement` | `lvrend.cpp` |
+| `render_w` pre-computation: `base_char_count × font_size` for correct column depth | `lvtextfm.cpp` |
+| **P1 FIXED**: Ruby annotation now renders in vertical-rl mode, annotation to the right of base | visually confirmed |
 
 ### Formal tests
 
@@ -148,28 +151,7 @@ bool LVDocView::isVerticalText() const {
 
 ## Phase 2 Remaining Issues (prioritized)
 
-### P1 — Ruby annotation visual position wrong ← NEXT
-
-Confirmed visually: annotations are displaced both **horizontally** (wrong column)
-and **vertically** (downward shift within the column) relative to base characters.
-
-**Root cause:**
-Current implementation applies `html5.css` shield `ruby { writing-mode: horizontal-tb }`,
-so the ruby table renders in horizontal mode inside a vertical paragraph. This causes:
-
-1. *Horizontal shift*: `rbRow.Y = annotation_row_height` maps to screen_x offset,
-   pushing base characters left by ~24px from annotation characters.
-2. *Vertical shift*: Inside the horizontal rt cell, each annotation character has
-   increasing `word->x` (horizontal layout). In vertical-rl DrawDocument context,
-   `word->x` translates to screen_y offset — multi-char annotations stack downward.
-
-**Fix direction:**
-Remove the CSS `writing-mode` shield from `html5.css` and implement proper vertical-rl
-ruby drawing in `LFormattedText::Draw()` / `DrawDocument`. The ruby inline box draw
-coordinates need to be adjusted so base and annotation characters align correctly.
-Files: `lvtextfm_layout_h.cpp`, `lvtinydom.cpp` DrawDocument, `html5.css`.
-
-### P2 — Character rotation (ー 。「」… etc.) not implemented
+### P2 — Character rotation (ー 。「」… etc.) not implemented ← NEXT
 
 Characters that need vertical glyph forms or 90° rotation currently draw upright:
 - ー (KATAKANA-HIRAGANA PROLONGED SOUND MARK) — should rotate to vertical dash
@@ -183,7 +165,7 @@ The remaining cases are glyphs that need explicit rotation in the draw code.
 ### P3 — 。/、 clipping at column bottom
 
 Sentence-end punctuation glyph may clip at the last character's column boundary.
-Deferred until P1 (proper ruby drawing) and P2 (rotation) are in place.
+Deferred until P2 (rotation) is in place.
 
 ### P4 — Ruby sbox root cause (getRect/getAbsRect for rt-descendant nodes)
 
