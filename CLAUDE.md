@@ -170,18 +170,33 @@ novels with ruby annotations (the target use case for this project).
 `BLOCK_RENDERING_ENHANCED` is set (always set for new documents). The crash is a
 SIGSEGV in the C++ layer; it cannot be caught by Lua `pcall`.
 
-**Root cause: unknown.** `git bisect` across our 40 crengine commits vs upstream
-not yet done. Suspected: `persist()` called inside the inner `for (i1)` loop at
-lines 8573–8578 while iterating over children whose positions may have shifted
-from the DOM modifications earlier in the same boxing pass.
+**Root cause: identified by `git bisect`.** Regressing commit:
+`b539a238 Phase 1a: Add CSS writing-mode and text-orientation property support`
+
+Adding `writing-mode` as an inherited CSS property caused `<ruby>` and its
+children (including boxing-generated `<rubyBox>`, `<rt>` cells) to inherit
+`writing-mode: vertical-rl` when vertical CSS is applied. This puts the ruby
+inline box through the vertical-mode re-render path where
+`m_pbuffer->width ≈ 1352px` is used as the column height. The CCRTable (ruby
+table) or its cells crash with this oversized width.
+
+(Note: the crash triggers on vertical CSS application, not on initial open.)
 
 **Current state:** `simple_ja_ruby.epub` fixture uses `ruby { display: inline }`
 as a temporary bypass so tests can run. Real EPUBs are still broken.
 
+**Bisect reproducer:** `spec/unit/bisect_ruby_crash_spec.lua` +
+`test/fixtures/vertical_text/crash_ruby.epub` (untracked, recreate if needed).
+
 **Required fix (Phase 2):**
-1. `git bisect run` on crengine submodule to find the regressing commit
-2. Patch the boxing code or `persist()` call order so ruby EPUBs open without
-   crashing — this is prerequisite for all real-world Japanese novel testing.
+Prevent ruby boxing-generated elements from entering the wrong vertical-mode
+formatting path. Options:
+- Add explicit `writing-mode: horizontal-tb !important` to the ruby UA stylesheet
+  for `ruby`, `rt`, `rp`, `rubyBox` boxing elements (CSS shielding)
+- OR guard the vertical `Format()` path against being called on inline-table ruby
+  cells that should not re-flow as vertical columns
+- OR fix the `render_w` used for ruby inline boxes to not be `m_pbuffer->width`
+  when in vertical mode — this would prevent the oversized CCRTable width
 
 ### Phase 2 glyph issues (lower priority)
 
