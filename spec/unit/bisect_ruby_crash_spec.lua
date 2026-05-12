@@ -6,12 +6,12 @@
 -- crash_ruby.epub: minimal EPUB with <ruby>石<rt>いし</rt></ruby> and no
 -- "ruby { display: inline }" CSS — triggers the boxing path that crashes.
 --
--- Usage for git bisect (from crengine submodule root):
+-- Usage for git bisect (from base repo root):
 --   git bisect start
 --   git bisect bad HEAD                # current HEAD: crashes
---   git bisect good eabbbe2f           # last upstream commit: no crash
+--   git bisect good d2e19c9a           # last upstream commit: no crash
 --   git bisect run \
---       base/tests/fixtures/vertical_text/bisect-ruby-crash.sh
+--       tests/fixtures/vertical_text/bisect-ruby-crash.sh
 --   git bisect reset
 
 describe("Ruby boxing bisect", function()
@@ -40,10 +40,8 @@ describe("Ruby boxing bisect", function()
             dimen = Screen:getSize(),
             document = DocumentRegistry:openDocument(epub),
         }
-        -- The crash is triggered by applying vertical-rl CSS which causes a
-        -- re-render with BLOCK_RENDERING_ENHANCED + ruby boxing in vertical mode.
-        -- Without the render_w fix, this SIGSEGV kills the process → exit != 0.
         UIManager:show(readerui)
+        fastforward_ui_events()
         if readerui.styletweak then
             readerui.styletweak.book_style_tweak = "body { writing-mode: vertical-rl !important; }"
             readerui.styletweak.book_style_tweak_enabled = true
@@ -51,7 +49,7 @@ describe("Ruby boxing bisect", function()
         end
         fastforward_ui_events()
         UIManager:quit()
-        assert.truthy(readerui, "ReaderUI survived vertical-rl re-render")
+        assert.truthy(readerui, "ReaderUI survived vertical-rl re-render with ruby content")
         readerui:onClose()
     end)
 end)

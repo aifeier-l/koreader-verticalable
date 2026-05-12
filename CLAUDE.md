@@ -160,43 +160,33 @@ sum exceeds page_height and `screen_y` lands off-screen.
 `getRect` to use the correct doc_x formula for inline-box-descendant (rt) nodes in
 vertical mode.
 
-### **[Phase 2 BUG]** Ruby boxing crash (SIGSEGV) — blocks real-EPUB use
+### Ruby boxing crash — FIXED
 
-**Severity: HIGH.** Any EPUB that contains `<ruby>` elements with default
-`display: ruby` will SIGSEGV crengine. This affects all standard Japanese
-novels with ruby annotations (the target use case for this project).
+**Root cause identified via `git bisect`.**
+Regressing commit: `b539a238 Phase 1a: Add CSS writing-mode and text-orientation support`
 
-**Crash location:** `lvtinydom.cpp:8186–8582` — ruby boxing code triggered when
-`BLOCK_RENDERING_ENHANCED` is set (always set for new documents). The crash is a
-SIGSEGV in the C++ layer; it cannot be caught by Lua `pcall`.
+Adding `writing-mode` as an inherited CSS property caused the render method
+assignment code in `initNodeRendMethod` (lines 8538-8585 in `lvtinydom.cpp`) to
+run on EVERY re-render, not just on the initial boxing pass. On re-render, the
+code toggled `rbox2->setRendMethod(erm_invisible)` then back to `erm_table_row`,
+triggering consecutive `modified()` calls on the B-tree storage chunk. This
+caused heap corruption that later manifested as SIGSEGV in
+`RenderRectAccessor(enode)` inside `renderBlockElementEnhanced`.
 
-**Root cause: identified by `git bisect`.** Regressing commit:
-`b539a238 Phase 1a: Add CSS writing-mode and text-orientation property support`
+**Fix:** Guard the render method assignment section with `if (needs_wrapping)` so
+it only runs when boxing is actually being performed (first render), not on
+subsequent re-renders where boxing nodes already have correct render methods.
+`lvtinydom.cpp` lines 8535-8590.
 
-Adding `writing-mode` as an inherited CSS property caused `<ruby>` and its
-children (including boxing-generated `<rubyBox>`, `<rt>` cells) to inherit
-`writing-mode: vertical-rl` when vertical CSS is applied. This puts the ruby
-inline box through the vertical-mode re-render path where
-`m_pbuffer->width ≈ 1352px` is used as the column height. The CCRTable (ruby
-table) or its cells crash with this oversized width.
+**Additional CSS shield (`html5.css`):** `ruby { writing-mode: horizontal-tb !important }` 
+prevents ruby boxing-generated elements from using vertical-mode formatting
+until proper vertical ruby rendering is implemented. This ensures correct visual
+output (horizontal annotations) as well as preventing any residual issues.
 
-(Note: the crash triggers on vertical CSS application, not on initial open.)
-
-**Current state:** `simple_ja_ruby.epub` fixture uses `ruby { display: inline }`
-as a temporary bypass so tests can run. Real EPUBs are still broken.
-
-**Bisect reproducer:** `spec/unit/bisect_ruby_crash_spec.lua` +
-`test/fixtures/vertical_text/crash_ruby.epub` (untracked, recreate if needed).
-
-**Required fix (Phase 2):**
-Prevent ruby boxing-generated elements from entering the wrong vertical-mode
-formatting path. Options:
-- Add explicit `writing-mode: horizontal-tb !important` to the ruby UA stylesheet
-  for `ruby`, `rt`, `rp`, `rubyBox` boxing elements (CSS shielding)
-- OR guard the vertical `Format()` path against being called on inline-table ruby
-  cells that should not re-flow as vertical columns
-- OR fix the `render_w` used for ruby inline boxes to not be `m_pbuffer->width`
-  when in vertical mode — this would prevent the oversized CCRTable width
+**Tests:** `spec/unit/bisect_ruby_crash_spec.lua` with `crash_ruby.epub` (untracked,
+recreate from /tmp/crash_epub/) confirms the fix. `simple_ja_ruby.epub` fixture
+no longer needs `ruby { display: inline }` workaround — it has been restored to
+normal ruby CSS.
 
 ### Phase 2 glyph issues (lower priority)
 
