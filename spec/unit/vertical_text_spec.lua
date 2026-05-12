@@ -369,4 +369,91 @@ describe("Vertical text", function()
             end
         end)
     end)
+
+    -----------------------------------------------------------------------
+    -- 4. Ruby annotation sbox tests
+    -----------------------------------------------------------------------
+
+    describe("Ruby annotation sboxes #ruby", function()
+        local readerui, doc
+        local epub_path_ruby = "spec/front/unit/data/fixtures/vertical_text/simple_ja_ruby.epub"
+
+        setup(function()
+            readerui = ReaderUI:new{
+                dimen = Screen:getSize(),
+                document = DocumentRegistry:openDocument(epub_path_ruby),
+            }
+        end)
+
+        teardown(function()
+            readerui:onClose()
+        end)
+
+        before_each(function()
+            UIManager:show(readerui)
+            apply_vertical_css(readerui)
+            readerui.rolling:onGotoPage(1)
+            fastforward_ui_events()
+            doc = readerui.document
+        end)
+
+        after_each(function()
+            UIManager:quit()
+        end)
+
+        it("getWordFromPosition never returns off-screen sbox.y near ruby", function()
+            local h = Screen:getHeight()
+            local tol = 50  -- matches docToWindowPoint 50px page-edge tolerance
+            local checked = 0
+            for _, yf in ipairs({0.2, 0.3, 0.5, 0.7}) do
+                local y = math.floor(h * yf)
+                local xs = find_content_columns(doc, y, 1)
+                if xs then
+                    for _, x in ipairs(xs) do
+                        local ok, word = pcall(function()
+                            return doc:getWordFromPosition({x=x, y=y})
+                        end)
+                        if ok and word and word.sbox then
+                            local sb = word.sbox
+                            -- Uncomment for Phase 2 root-cause diagnostics:
+                            -- print(string.format("ruby tap (%d,%d) -> sbox x=%d y=%d w=%d h=%d word=%q",
+                            --     x, y, sb.x, sb.y, sb.w, sb.h, word.word or ""))
+                            assert.truthy(sb.y >= -tol,
+                                string.format("sbox.y=%d < %d (tap %d,%d word=%q)",
+                                    sb.y, -tol, x, y, word.word or ""))
+                            assert.truthy(sb.y + sb.h <= h + tol,
+                                string.format("sbox.y+h=%d > %d (tap %d,%d word=%q)",
+                                    sb.y + sb.h, h + tol, x, y, word.word or ""))
+                            checked = checked + 1
+                        end
+                    end
+                end
+            end
+            assert.truthy(checked > 0, "Ruby fixture: no sboxes encountered to validate")
+        end)
+
+        it("getTextFromPositions ruby range returns only on-screen sboxes", function()
+            local h = Screen:getHeight()
+            local tol = 50
+            local y = math.floor(h * 0.3)
+            local xs = find_content_columns(doc, y, 2)
+            if not xs then
+                pending("Not enough ruby content columns to test")
+                return
+            end
+            local right_x = xs[1]
+            local left_x  = xs[#xs]
+            local ok, result = pcall(function()
+                return doc:getTextFromPositions({x=right_x, y=y}, {x=left_x, y=y})
+            end)
+            assert.truthy(ok, "getTextFromPositions errored on ruby range")
+            local sboxes = (result and result.sboxes) or {}
+            for i, sb in ipairs(sboxes) do
+                assert.truthy(sb.y >= -tol,
+                    string.format("sbox[%d].y=%d off-screen top (screen_h=%d)", i, sb.y, h))
+                assert.truthy(sb.y + sb.h <= h + tol,
+                    string.format("sbox[%d].y+h=%d > %d off-screen bottom", i, sb.y + sb.h, h + tol))
+            end
+        end)
+    end)
 end)
