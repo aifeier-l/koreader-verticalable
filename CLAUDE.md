@@ -143,6 +143,7 @@ bool LVDocView::isVerticalText() const {
 | `col_width` grows for ruby (`= max(strut, max_inline_box_h)`) | `lvtextfm_layout_h.cpp:~2120` |
 | Inline-box `setY` shift `(col_w - box_h)` aligns base char with column left | `lvtextfm_layout_h.cpp:~545-575` |
 | **P1 FIXED**: Ruby base characters now align with body text in vertical-rl, annotations overhang into inter-column gap (per JLReq) | visually verified with sanshiro.epub and sorekara.epub |
+| **Page gap FIXED**: content missing/duplicated between pages in vertical-rl | 7 fixes across `lvdocview.cpp`, `lvrend.cpp`, `lvpagesplitter.{h,cpp}`, `lvtinydom.cpp` — see "Px" entry below |
 
 **Known limitation**: some EPUBs (e.g. `それから.epub`) have stray U+0020
 whitespace in their HTML between `</ruby>` and the next character (from
@@ -163,6 +164,63 @@ property of the EPUB source, not a rendering bug.
 - Ruby boxing: no SIGSEGV with vertical CSS on ruby EPUB
 
 ## Phase 2 Remaining Issues (prioritized)
+
+### Px — Content gap between pages (FIXED)
+
+Five interrelated bugs combined to make trailing columns of every
+page invisible on real EPUBs (verified with 三四郎.epub).  All needed
+together:
+
+1. `drawPageTo` (lvdocview.cpp) — Y=X swap mismatch.  After the X/Y
+   swap in `LFormattedText::Draw`, draw_x→y (row) and draw_y→x→line_x
+   (column).  Old code passed x0=left_margin, y0=clip.top, so clip.top
+   got subtracted from every line_x, pushing the last clip.top pixels
+   of each page off the left clip edge.  For vertical mode, swap to
+   x0=clip.top, y0=0.
+
+2. `drawPageTo` clip.bottom — page.height is the column-progression
+   stride in vertical mode, NOT the vertical extent.  Using it for
+   clip.bottom truncated each column at clip.top + ~page_width on
+   screen and left the bottom of every page empty.  Use
+   `pageRect->bottom - bottom_margin` for vertical.
+
+3. `drawPageTo` clip.left — `LFormattedText::Draw` checks per-frmline
+   visibility purely from line_x ∈ [clip.left, clip.right] and
+   doesn't know page boundaries.  When a block straddled the page
+   boundary, frmlines past the boundary were still drawn (same column
+   appearing on page N and again on page N+1 — duplicate content).
+   Set clip.left = clip.right - page.height for vertical to clip
+   past-boundary frmlines.
+
+4. `isVerticalText` (lvdocview.cpp) — heuristic checked only
+   `m_pages[0]->height`, which can be a tall cover page.  Now: try
+   the body element's writing-mode style first, then scan all pages
+   for any with height ≤ m_dx + 32 as fallback.
+
+5. `renderBlockElement` (lvrend.cpp) — writing_mode descendant scan.
+   crengine stores the CSS specified value, not the cascaded value;
+   for elements that inherit writing-mode (root, body), this returns
+   css_wm_inherit (=0).  Walk descendants (DFS, depth ≤ 6, ≤ 64
+   nodes) to find any element whose stored writing_mode resolved to
+   vertical.
+
+6. `addContentSpace` (lvrend.cpp) — c_y double-advance.  The vertical
+   branch advanced c_y by height; the trailing `moveDown(height)`
+   advanced it again.  Move `moveDown()` into the horizontal-only
+   else branch.
+
+7. `LVRendPageContext` (lvpagesplitter.{h,cpp}) — page-split stride
+   was coupled to the text formatter's column length (both came from
+   `page_h`).  Setting `page_h = page_width` for the page splitter
+   broke the text formatter (columns clipped to ~half the screen,
+   the bottom empty with floating characters).  Add a separate
+   `vert_split_page_h` field used only by `split()` via
+   `getEffectivePageHeight()`; FlowState calls
+   `setVerticalSplitPageHeight(page_width)` so page_h stays at
+   _page_height.
+
+`FORMATTING_VERSION_ID` 0x0034 → 0x0036 invalidates caches with
+stale page boundaries.
 
 ### P2 — Character rotation (ー 。「」… etc.) not implemented ← NEXT
 
