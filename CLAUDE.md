@@ -131,11 +131,24 @@ bool LVDocView::isVerticalText() const {
 | Fix | Location |
 |-----|----------|
 | `docToWindowPoint` screen_y bounds check (ruby sbox defensive) | `lvdocview.cpp:2748-2768` |
-| Ruby boxing SIGSEGV: `if(needs_wrapping)` guard in `initNodeRendMethod` | `lvtinydom.cpp:8535` |
+| Ruby boxing SIGSEGV: `if(needs_wrapping)` guard in `initNodeRendMethod` | `lvtinydom.cpp:~8580` |
 | CSS shield removed (`ruby { writing-mode: horizontal-tb }` was the old workaround) | `cr3gui/data/html5.css` |
 | Code-level writing-mode shield removed from `renderBlockElement` | `lvrend.cpp` |
 | `render_w` pre-computation: `base_char_count × font_size` for correct column depth | `lvtextfm.cpp` |
-| **P1 FIXED**: Ruby annotation now renders in vertical-rl mode, annotation to the right of base | visually confirmed |
+| `base_char_count_pre` traversal: distinguish rbox2_base vs rbox2_annot by first child nodeId | `lvtextfm.cpp:~2247` |
+| Ruby render-method preservation on re-render (special case in `css_d_inline` branch) | `lvtinydom.cpp:~7513` |
+| Inline-box advance = actual rendered width (Latin-in-ruby fix) | `lvtextfm.cpp:~2369` |
+| `processParagraphVertical` SIGSEGV: skip object sources when reading t.font | `lvtextfm_layout_v.cpp:~104` |
+| `alignLineHorizontal` uses block width for inner cells in vertical mode | `lvtextfm_layout_h.cpp:~10-22` |
+| `col_width` grows for ruby (`= max(strut, max_inline_box_h)`) | `lvtextfm_layout_h.cpp:~2120` |
+| Inline-box `setY` shift `(col_w - box_h)` aligns base char with column left | `lvtextfm_layout_h.cpp:~545-575` |
+| **P1 FIXED**: Ruby base characters now align with body text in vertical-rl, annotations overhang into inter-column gap (per JLReq) | visually verified with sanshiro.epub and sorekara.epub |
+
+**Known limitation**: some EPUBs (e.g. `それから.epub`) have stray U+0020
+whitespace in their HTML between `</ruby>` and the next character (from
+source-side newlines/indentation). With `white-space: normal` this renders
+as a visible ~1-char gap. This appears in horizontal mode too — it is a
+property of the EPUB source, not a rendering bug.
 
 ### Formal tests
 
