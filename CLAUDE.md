@@ -222,16 +222,36 @@ together:
 `FORMATTING_VERSION_ID` 0x0034 → 0x0036 invalidates caches with
 stale page boundaries.
 
-### P2 — Character rotation (ー 。「」… etc.) not implemented ← NEXT
+### P2 — Character rotation (ー 。「」… etc.) ← IMPLEMENTED, needs testing
 
-Characters that need vertical glyph forms or 90° rotation currently draw upright:
+Characters that need vertical glyph forms or 90° rotation:
 - ー (KATAKANA-HIRAGANA PROLONGED SOUND MARK) — should rotate to vertical dash
 - 。、 sentence-end punctuation — shifted to upper-right in vertical glyph
 - 「」『』 brackets — should rotate 90°
 - … ‥ ellipsis marks — should rotate
 
-Note: +vert/+vrt2 OpenType substitution is active for fonts that have it (Noto CJK).
-The remaining cases are glyphs that need explicit rotation in the draw code.
+**Approach**: +vert/+vrt2 OpenType substitution is active for fonts that have it
+(Noto CJK). For fonts WITHOUT a +vert variant for a character, explicit 90° CW
+rotation is applied in `DrawTextString` (`lvfntman.cpp`).
+
+**Detection**: after HarfBuzz shaping with +vert features, compare each shaped
+glyph ID against the cmap nominal glyph (`hb_font_get_glyph`).  If unchanged,
++vert did not substitute → rotate explicitly.  If the ID differs, the font
+already provided a vertical form → draw normally.
+
+**Characters with explicit rotation** (when +vert absent):
+  U+30FC ー, U+301C 〜, U+2014 —, U+2015 ―, U+2025 ‥, U+2026 …
+
+**Not handled by explicit rotation** (rely on +vert or PLANNED):
+  。、 (U+3002, U+3001) — position shift, not rotation; handled by +vert vertical glyphs
+  「」『』 brackets — dedicated +vert forms in most CJK fonts; no fallback rotation yet
+
+**Implementation**: `needsVerticalRotation90CW()` + `drawGlyphItemRotated90CW()`
+in `lvfntman.cpp` after `drawGlyphItem()`.
+
+**Ruby annotation centering fix** (same branch): `alignLineHorizontal` inner-cell
+fix now uses `max(m_pbuffer->width, frmline->width)` as slot width; eliminates
+~360 px centering error when HarfBuzz advance slightly exceeds `render_w` estimate.
 
 ### P3 — 。/、 clipping at column bottom
 
