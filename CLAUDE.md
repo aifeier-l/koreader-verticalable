@@ -143,6 +143,7 @@ bool LVDocView::isVerticalText() const {
 | `col_width` grows for ruby (`= max(strut, max_inline_box_h)`) | `lvtextfm_layout_h.cpp:~2120` |
 | Inline-box `setY` shift `(col_w - box_h)` aligns base char with column left | `lvtextfm_layout_h.cpp:~545-575` |
 | **P1 FIXED**: Ruby base characters now align with body text in vertical-rl, annotations overhang into inter-column gap (per JLReq) | visually verified with sanshiro.epub and sorekara.epub |
+| Body char centering in ruby-inflated columns: only apply `(strut-em)/2` when `frmline->height <= strut`; in inflated columns x0=line_x-frmh is already correct (debug-verified 4px fix) | `lvtextfm_layout_h.cpp:~3602` |
 | **Page gap FIXED**: content missing/duplicated between pages in vertical-rl | 7 fixes across `lvdocview.cpp`, `lvrend.cpp`, `lvpagesplitter.{h,cpp}`, `lvtinydom.cpp` — see "Px" entry below |
 
 **Known limitation**: some EPUBs (e.g. `それから.epub`) have stray U+0020
@@ -280,6 +281,33 @@ coordinate origin differs from screen Y=0. Low impact; noted as a known inaccura
 
 - Mixed horizontal/vertical blocks in one document
 - Floats in vertical mode (currently disabled)
+
+### P7 — ページ進行方向が左→右固定
+
+vertical-rl では本来ページは右→左に進む（第1列が画面右端、次ページへは左方向）。
+現状のページ送り・タップゾーン・スワイプ方向などが水平モードと同じ左→右前提に
+なっている可能性がある。調査・修正が必要。
+
+関連箇所: `frontend/` のタップ/スワイプハンドラ、`ReaderPaging` / `ReaderView`、
+`lvdocview.cpp` のページナビゲーション API。
+
+### P8 — 列末位置の不統一（行末がバラバラ）
+
+各列の最後の文字の垂直位置が列によって大きくばらつき、見た目の統一感がない。
+考えられる原因：
+- 句読点の advance クランプ（`vert_min_next_x`）が列充填を乱す
+- `word->width` の実測値とフォントサイズの差
+- 段落末尾の余白処理が垂直モード非対応
+
+### P9 — 回転グリフの bearing/position 補正欠落
+
+（旧タスク #1）`drawGlyphItemRotated90CW` で 90° 回転後の glyph に
+bearing/origin 補正が入っていないため、回転グリフが列内でずれる可能性。
+
+### P10 — ルビインラインボックスの実 advance と word->x 不整合
+
+（旧タスク #2）measureText で計算したルビ inline box の advance と、
+Draw 時の word->x が整合していない場合に位置ズレが生じる。
 
 ## Key File Locations
 
