@@ -223,42 +223,6 @@ together:
 `FORMATTING_VERSION_ID` 0x0034 → 0x0036 invalidates caches with
 stale page boundaries.
 
-### P2 — Character rotation (ー 。「」… etc.) ← IMPLEMENTED, needs testing
-
-Characters that need vertical glyph forms or 90° rotation:
-- ー (KATAKANA-HIRAGANA PROLONGED SOUND MARK) — should rotate to vertical dash
-- 。、 sentence-end punctuation — shifted to upper-right in vertical glyph
-- 「」『』 brackets — should rotate 90°
-- … ‥ ellipsis marks — should rotate
-
-**Approach**: +vert/+vrt2 OpenType substitution is active for fonts that have it
-(Noto CJK). For fonts WITHOUT a +vert variant for a character, explicit 90° CW
-rotation is applied in `DrawTextString` (`lvfntman.cpp`).
-
-**Detection**: after HarfBuzz shaping with +vert features, compare each shaped
-glyph ID against the cmap nominal glyph (`hb_font_get_glyph`).  If unchanged,
-+vert did not substitute → rotate explicitly.  If the ID differs, the font
-already provided a vertical form → draw normally.
-
-**Characters with explicit rotation** (when +vert absent):
-  U+30FC ー, U+301C 〜, U+2014 —, U+2015 ―, U+2025 ‥, U+2026 …
-
-**Not handled by explicit rotation** (rely on +vert or PLANNED):
-  。、 (U+3002, U+3001) — position shift, not rotation; handled by +vert vertical glyphs
-  「」『』 brackets — dedicated +vert forms in most CJK fonts; no fallback rotation yet
-
-**Implementation**: `needsVerticalRotation90CW()` + `drawGlyphItemRotated90CW()`
-in `lvfntman.cpp` after `drawGlyphItem()`.
-
-**Ruby annotation centering fix** (same branch): `alignLineHorizontal` inner-cell
-fix now uses `max(m_pbuffer->width, frmline->width)` as slot width; eliminates
-~360 px centering error when HarfBuzz advance slightly exceeds `render_w` estimate.
-
-### P3 — 。/、 clipping at column bottom
-
-Sentence-end punctuation glyph may clip at the last character's column boundary.
-Deferred until P2 (rotation) is in place.
-
 ### P4 — Ruby sbox root cause (getRect/getAbsRect for rt-descendant nodes)
 
 **Symptom suppressed** by `docToWindowPoint` screen_y bounds check
@@ -291,13 +255,17 @@ vertical-rl では本来ページは右→左に進む（第1列が画面右端�
 関連箇所: `frontend/` のタップ/スワイプハンドラ、`ReaderPaging` / `ReaderView`、
 `lvdocview.cpp` のページナビゲーション API。
 
-### P8 — 列末位置の不統一（行末がバラバラ）
+### P8 — 列末位置の不統一（行末がバラバラ）— 部分修正済み
 
-各列の最後の文字の垂直位置が列によって大きくばらつき、見た目の統一感がない。
-考えられる原因：
-- 句読点の advance クランプ（`vert_min_next_x`）が列充填を乱す
-- `word->width` の実測値とフォントサイズの差
-- 段落末尾の余白処理が垂直モード非対応
+各列の最後の文字の垂直位置が列によって大きくばらつく。短い段落が独立した短列になるのは
+行頭揃えの仕様。フル列の下端余白は `char_count_adv` バッファを `avg/2` に削減して改善
+（53px → 平均28.5px）。
+
+**根本原因（未解決）**: HarfBuzz TTB方向テキストへの誤った `hb_buffer_reverse_clusters()`
+呼び出し（`lvfntman.cpp:2968`）が `m_advance` を不正確にし（多くの文字が advance=0）、
+`char_count_adv` はそのワークアラウンド。TTB reversal を削除すると m_advance は正確になるが、
+ルビ付き漢字の `node_fmt.setX(frmline->x + word->x)` 経由の縦位置が大幅にずれる副作用が
+あり、deeper な設計調査が必要。
 
 ### P9 — 回転グリフの bearing/position 補正欠落
 
