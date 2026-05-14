@@ -330,4 +330,171 @@ describe("Ruby position", function()
                     total_checked, char_size, table.concat(parts, "\n")))
         end)
     end)
+
+    -----------------------------------------------------------------------
+    -- N:N ruby centering: for same-count ruby (N base chars, N annotation
+    -- chars) with 2:1 font ratio, each annotation char's centre Y must
+    -- match its corresponding base char's centre Y (mono-ruby / 対応ルビ
+    -- positioning, JLReq §3.3.8).
+    --
+    -- Uses ruby_misalign.epub which contains 肌理（きめ）and 部屋（へや）
+    -- — both are 2-base × 2-annotation groups with 2:1 font ratio.
+    --
+    -- Strategy: scan the page for body-size chars (large sbox.h) and
+    -- annotation-size chars (small sbox.h) that overlap in Y range.
+    -- For each such pair, check |midY_annot - midY_base| ≤ tol.
+    -----------------------------------------------------------------------
+    describe("N:N ruby annotation centres match base centres #ruby_nn", function()
+        local readerui, doc
+        local nn_epub = "spec/front/unit/data/fixtures/vertical_text/ruby_misalign.epub"
+
+        setup(function()
+            readerui = ReaderUI:new{
+                dimen = Screen:getSize(),
+                document = DocumentRegistry:openDocument(nn_epub),
+            }
+        end)
+
+        teardown(function()
+            readerui:onClose()
+        end)
+
+        before_each(function()
+            UIManager:show(readerui)
+            readerui.rolling:onGotoPage(1)
+            fastforward_ui_events()
+            doc = readerui.document
+        end)
+
+        after_each(function()
+            UIManager:quit()
+        end)
+
+        it("annotation midY ≈ base midY for N:N ruby #ruby_nn", function()
+            local h = Screen:getHeight()
+            local w = Screen:getWidth()
+            local step = 4
+
+            -- Collect all sboxes. Body chars have large sbox.h, annotation small.
+            local body_chars = {}
+            local annot_chars = {}
+            local seen = {}
+
+            for x = w - 6, 6, -step do
+                for y = 6, h - 6, step do
+                    local ok, word = pcall(function()
+                        return doc:getWordFromPosition({x=x, y=y})
+                    end)
+                    if ok and word and word.word and word.sbox then
+                        local sb = word.sbox
+                        local key = string.format("%d_%d", sb.x, sb.y)
+                        if not seen[key] and sb.w > 0 and sb.h > 0 then
+                            seen[key] = true
+                            local midY = sb.y + sb.h / 2
+                            if sb.h >= 16 and sb.h <= 30 then
+                                table.insert(body_chars, {
+                                    word=word.word, x=sb.x, y=sb.y,
+                                    w=sb.w, h=sb.h, midY=midY
+                                })
+                            elseif sb.h >= 7 and sb.h <= 15 then
+                                table.insert(annot_chars, {
+                                    word=word.word, x=sb.x, y=sb.y,
+                                    w=sb.w, h=sb.h, midY=midY
+                                })
+                            end
+                        end
+                    end
+                end
+            end
+
+            if #body_chars == 0 then
+                pending("No body chars found — layout/font issue")
+                return
+            end
+            if #annot_chars == 0 then
+                pending("No annotation chars found — ruby may not render on this page")
+                return
+            end
+
+            -- Directly test N:N ruby groups in ruby_misalign.epub.
+            -- 部屋(へや) is a 2-base × 2-annotation group with 2:1 font ratio.
+            -- Block centering misaligns individual chars by ~5px;
+            -- mono-ruby even distribution aligns them within ±2px.
+            --
+            -- Strategy: for each known (base_word, annot_word) pair, find the
+            -- annotation char in annot_chars and the body char in body_chars whose
+            -- midY is NEAREST to the annotation midY (within 30px).  Pairs with a
+            -- large Y gap are from different ruby groups or have wrong sboxes (P4)
+            -- and are skipped.
+            local tol = 3      -- px: max allowed |annot_midY - base_midY|
+            local y_proximity = 30  -- px: annotation and base must be this close in Y
+            local nn_targets = {
+                {base="部", annot="へ"},
+                {base="屋", annot="や"},
+            }
+
+            local violations = {}
+            local checked = 0
+            for _, pair in ipairs(nn_targets) do
+                -- Find annotation char.
+                local ac = nil
+                for _, c in ipairs(annot_chars) do
+                    if c.word == pair.annot then ac = c; break end
+                end
+                if not ac then goto continue end
+
+                -- Find nearest body char with the target word, within y_proximity.
+                local best_bc = nil
+                local best_dist = math.huge
+                for _, bc in ipairs(body_chars) do
+                    if bc.word == pair.base then
+                        local d = math.abs(ac.midY - bc.midY)
+                        if d < best_dist and d <= y_proximity then
+                            best_dist = d
+                            best_bc = bc
+                        end
+                    end
+                end
+                if not best_bc then goto continue end
+
+                checked = checked + 1
+                local offset = ac.midY - best_bc.midY
+                if math.abs(offset) > tol then
+                    table.insert(violations, {
+                        base_word  = pair.base,
+                        annot_word = pair.annot,
+                        base_midY  = best_bc.midY,
+                        annot_midY = ac.midY,
+                        offset     = offset,
+                    })
+                end
+                ::continue::
+            end
+
+            if checked == 0 then
+                pending("No annotation/base pairs found with overlapping Y ranges")
+                return
+            end
+
+            if checked == 0 then
+                pending("None of the target ruby pairs found on page — rendering or layout issue")
+                return
+            end
+
+            local parts = {}
+            for _, v in ipairs(violations) do
+                table.insert(parts, string.format(
+                    "[%s]midY=%.1f vs [%s]midY=%.1f offset=%.1fpx (>±%dpx)",
+                    v.annot_word, v.annot_midY,
+                    v.base_word,  v.base_midY,
+                    v.offset, tol))
+            end
+
+            assert.are.equal(0, #violations,
+                string.format(
+                    "N:N ruby annotation midY misaligned (%d/%d pairs exceed ±%dpx):\n%s",
+                    #violations, checked, tol,
+                    table.concat(parts, "\n")))
+        end)
+    end)
 end)
