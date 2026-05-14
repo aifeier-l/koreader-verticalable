@@ -116,8 +116,10 @@ end
 function ReaderRolling:onGesture() end
 
 function ReaderRolling:registerKeyEvents()
-    local nextKey = BD.mirroredUILayout() and "Left" or "Right"
-    local prevKey = BD.mirroredUILayout() and "Right" or "Left"
+    local inverse = self.view and self.view.inverse_reading_order or false
+    local swap = BD.mirroredUILayout() ~= inverse
+    local nextKey = swap and "Left" or "Right"
+    local prevKey = swap and "Right" or "Left"
     if Device:hasDPad() and Device:useDPadAsActionKeys() then
         if G_reader_settings:isTrue("left_right_keys_turn_pages") then
             self.key_events.GotoNextView = { { { "LPgFwd", nextKey } }, event = "GotoViewRel", args = 1, }
@@ -341,7 +343,15 @@ function ReaderRolling:onSaveSettings()
 end
 
 function ReaderRolling:onReaderReady()
+    -- Auto-detect vertical-rl writing mode.  For vertical-rl documents the
+    -- correct page-turn direction is right-to-left (first page on the right,
+    -- subsequent pages to the left), so inverse_reading_order must be true.
+    -- Always enforce this on open regardless of any previously saved value.
+    if self.ui.document:isVerticalText() then
+        self.view.inverse_reading_order = true
+    end
     self:setupTouchZones()
+    self:registerKeyEvents()
     if self.hide_nonlinear_flows then
         self.ui.document:cacheFlows()
     end

@@ -106,6 +106,11 @@ describe("Vertical text", function()
             UIManager:quit()
         end)
 
+        it("should detect vertical-rl mode via isVerticalText()", function()
+            assert.is_true(doc:isVerticalText(),
+                "isVerticalText() should return true for vertical-rl document")
+        end)
+
         it("should find a word somewhere on the vertical-rl page", function()
             -- Dynamic content detection: scan multiple positions.
             local x, y, word = find_any_content(doc)

@@ -1458,6 +1458,10 @@ function CreDocument:isBuiltDomStale()
     return self._document:isBuiltDomStale()
 end
 
+function CreDocument:isVerticalText()
+    return self._document:isVerticalText()
+end
+
 function CreDocument:hasCacheFile()
     return self._document:hasCacheFile()
 end
