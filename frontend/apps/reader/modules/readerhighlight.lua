@@ -1021,6 +1021,11 @@ function ReaderHighlight:clear(clear_id)
         self.view.highlight.temp = {}
     else
         self.ui.document:clearSelection()
+        -- For vertical-rl rolling mode the Lua-side highlight may have been
+        -- populated; clear it unconditionally to avoid stale boxes.
+        if next(self.view.highlight.temp) ~= nil then
+            self.view.highlight.temp = {}
+        end
     end
     if self.restore_page_mode_func then
         self.restore_page_mode_func()
@@ -1837,7 +1842,12 @@ function ReaderHighlight:onHoldPan(_, ges)
     self.holdpan_pos = self.view:screenToPageTransform(ges.pos)
     logger.dbg("holdpan position in page", self.holdpan_pos)
 
-    if self.ui.rolling and self.allow_corner_scroll and self.selected_text_start_xpointer then
+    -- In vertical-rl, the natural large-selection endpoint (bottom-left = last column)
+    -- coincides with the "next page" corner when inverse_reading_order is set.
+    -- Disable corner-scroll for vertical text to avoid cancelling the selection.
+    local is_vertical = self.ui.document.isVerticalText and self.ui.document:isVerticalText()
+    if self.ui.rolling and self.allow_corner_scroll and self.selected_text_start_xpointer
+            and not is_vertical then
         -- With CreDocuments, allow text selection across multiple pages
         -- by (temporarily) switching to scroll mode when panning to the
         -- top left or bottom right corners.
@@ -1946,7 +1956,12 @@ function ReaderHighlight:onHoldPan(_, ges)
     end
 
     local old_text = self.selected_text and self.selected_text.text
-    self.selected_text = self.ui.document:getTextFromPositions(self.hold_pos, self.holdpan_pos)
+    -- For vertical-rl rolling documents, native crengine selection draws
+    -- per-word boxes (scattered) rather than column-spanning boxes.
+    -- Use Lua-side drawing via view.highlight.temp for cleaner appearance.
+    local use_lua_highlight = is_vertical and self.ui.rolling
+    self.selected_text = self.ui.document:getTextFromPositions(self.hold_pos, self.holdpan_pos,
+        use_lua_highlight)
     self.is_word_selection = false
 
     if self.selected_text and self.selected_text.pos0 then
@@ -1971,6 +1986,33 @@ function ReaderHighlight:onHoldPan(_, ges)
     logger.dbg("selected text:", self.selected_text)
     if self.ui.paging and self.selected_text then
         self.view.highlight.temp[self.hold_pos.page] = self.selected_text.sboxes
+    elseif use_lua_highlight and self.selected_text then
+        -- Clear the native crengine word selection from onHold so it does not
+        -- show through the Lua column boxes.
+        self.ui.document:clearSelection()
+        -- docToWindowPoint computes sbox.x using page_right = clip.right - margin_right,
+        -- but drawPageTo draws columns starting from clip.right (without margin).
+        -- Shift sboxes by the margin values so they align with the drawn glyphs.
+        local sboxes = self.selected_text.sboxes
+        if sboxes and #sboxes > 0 then
+            local margins = self.ui.document:getPageMargins()
+            -- Only X needs correction: docToWindowPoint uses page_right (clip.right -
+            -- margins.right) but drawPageTo draws from clip.right, so sbox.x is
+            -- margins.right px to the left of the actual glyph.
+            -- Y is already in absolute screen coordinates — no correction needed.
+            local dx = margins and margins.right or 0
+            local dy = 0
+            if dx ~= 0 then
+                local Geom = require("ui/geometry")
+                local shifted = {}
+                for _, sb in ipairs(sboxes) do
+                    table.insert(shifted, Geom:new{
+                        x = sb.x + dx, y = sb.y, w = sb.w, h = sb.h })
+                end
+                sboxes = shifted
+            end
+        end
+        self.view.highlight.temp[self.hold_pos.page] = sboxes
     end
     UIManager:setDirty(self.dialog, "ui")
 end

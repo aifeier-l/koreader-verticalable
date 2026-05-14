@@ -346,9 +346,13 @@ function ReaderRolling:onReaderReady()
     -- Auto-detect vertical-rl writing mode.  For vertical-rl documents the
     -- correct page-turn direction is right-to-left (first page on the right,
     -- subsequent pages to the left), so inverse_reading_order must be true.
-    -- Always enforce this on open regardless of any previously saved value.
+    -- Also enforce page mode: scroll mode breaks vertical-rl column layout.
+    -- Always enforce these on open regardless of any previously saved value.
     if self.ui.document:isVerticalText() then
         self.view.inverse_reading_order = true
+        if self.view.view_mode ~= "page" then
+            self.ui:handleEvent(Event:new("SetViewMode", "page"))
+        end
     end
     self:setupTouchZones()
     self:registerKeyEvents()
