@@ -389,9 +389,19 @@ To:
                 end,
             },
             {
+                text = _("Show parent folder"),
+                checked_func = function()
+                    return G_reader_settings:nilOrTrue("show_parent_folder")
+                end,
+                callback = function()
+                    G_reader_settings:flipNilOrTrue("show_parent_folder")
+                    FileChooser:refreshPath()
+                end,
+            },
+            {
                 text = _("Show collection mark"),
                 checked_func = function()
-                    return G_reader_settings:hasNot("collection_show_mark")
+                    return G_reader_settings:nilOrTrue("collection_show_mark")
                 end,
                 callback = function()
                     G_reader_settings:flipNilOrTrue("collection_show_mark")
