@@ -149,6 +149,7 @@ bool LVDocView::isVerticalText() const {
 | **圏点（傍点）text-emphasis**: CSS text-emphasis parsed and drawn (●○﹅etc.) | `cssdef.h`, `lvstyles.h`, `lvtextfm.h`, `lvstsheet.cpp`, `lvstyles.cpp`, `lvrend.cpp`, `lvtextfm.cpp`, `lvtextfm_layout_h.cpp` |
 | **禁則処理**: hanging punct guard (`!is_vertical_mode`); ぶら下げ禁則 for 。and 、 | `lvtextfm_layout_h.cpp`, `lvtextfm_layout_v.cpp` |
 | **ルビUI改善**: `docToWindowPoint` clamps screen_y to page_bottom instead of rejecting | `lvdocview.cpp` |
+| **列末文字欠落 FIXED**: characters at column bottom rendered as phantom (in frmline but no pixels on screen) — two-part fix: (1) BVO computation in `renderFinalBlock()` reduces `page_h` by block's accumulated screen-Y offset; (2) `>=` instead of `>` in `processParagraphVertical()` m_advance break condition to push zero-advance punctuation to next column | `lvtinydom.cpp:~21500`, `lvtextfm_layout_v.cpp:~242` (`FORMATTING_VERSION_ID` 0x003C → 0x003D) |
 
 ### Frontend (Lua) improvements
 
@@ -176,6 +177,10 @@ property of the EPUB source, not a rendering bug.
 
 `spec/unit/bisect_ruby_crash_spec.lua` — 1 test (pending when `crash_ruby.epub` absent):
 - Ruby boxing: no SIGSEGV with vertical CSS on ruby EPUB
+
+`spec/unit/vertical_column_bottom_spec.lua` — 2 tests (pending when no Japanese EPUB available):
+- Every word near column bottom has ink pixels at its sbox (no phantoms)
+- Word at column bottom edge (sbox bottom within 25px of page bottom) has ink
 
 ## Phase 2 Remaining Issues (prioritized)
 
@@ -284,6 +289,26 @@ vertical-rl では本来ページは右→左に進む（第1列が画面右端�
 - `lvtextfm_layout_h.cpp`: `is_neg_width > 0x8000` ワークアラウンド削除
 
 残る高さのばらつき: 短い段落が列の途中で終わることによる空白（行頭揃えの仕様）。
+
+### P11 — 列末文字が消える（穴があいているように見える）— **FIXED**
+
+**根本原因**: `processParagraphVertical()` が使う `maxH = page_height` (≈ 755px) は
+ページ全体の高さだが、実際にこのブロックが描画されるスクリーン Y 範囲は
+`clip.top + bvo` から `clip.bottom` までの `page_height - bvo` px だけ。
+`bvo`（Block Vertical Offset）= 祖先ブロックの X 位置の累積 = スクリーン Y 上のオフセット。
+その差分 (例: 29px) だけ列に余分な文字を詰め込んでしまい、
+`Draw()` で `y0 = clip.bottom` 以降にマップされる文字が `vert_skip_draw` によりスキップされていた。
+
+さらに `'。'` など TTB advance がゼロになる句読点が `m_advance = maxH` の位置に
+wrapPos として残り、`y0 = clip.bottom` に配置されて不可視になっていた。
+
+修正内容 (`FORMATTING_VERSION_ID 0x003C → 0x003D`):
+1. `lvtinydom.cpp renderFinalBlock()`: BVO（block vertical offset）を計算して
+   `page_h -= bvo`。BVO = `fmt->getX()` + 自ブロックの border/padding + 祖先の `getX()` 累積。
+   これにより formatter の `maxH` と実際の描画可能範囲が一致する。
+2. `lvtextfm_layout_v.cpp processParagraphVertical()`: `m_advance` の break 条件を
+   `> maxH` から `>= maxH` に変更。`m_advance == maxH` の文字（y0 = clip.bottom = 不可視）
+   を次列の先頭に送る。
 
 ### P9 — 回転グリフの bearing/position 補正欠落
 
