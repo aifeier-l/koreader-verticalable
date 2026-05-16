@@ -269,17 +269,21 @@ vertical-rl では本来ページは右→左に進む（第1列が画面右端�
 関連箇所: `frontend/` のタップ/スワイプハンドラ、`ReaderPaging` / `ReaderView`、
 `lvdocview.cpp` のページナビゲーション API。
 
-### P8 — 列末位置の不統一（行末がバラバラ）— 部分修正済み
+### P8 — 列末位置の不統一（行末がバラバラ）— **FIXED**
 
-各列の最後の文字の垂直位置が列によって大きくばらつく。短い段落が独立した短列になるのは
-行頭揃えの仕様。フル列の下端余白は `char_count_adv` バッファを `avg/2` に削減して改善
-（53px → 平均28.5px）。
+**根本原因（修正済み）**: `lvfntman.cpp` の `hb_buffer_reverse_clusters()` を TTB テキストに
+対して誤って呼び出していた。RTL では HarfBuzz がバッファを逆順出力するため reversal は必要
+だが、TTB では HarfBuzz はバッファを逆順にしない。誤った reversal で cluster→advance マッピン
+グが壊れ、`m_advance[0..N-2] = 0`、最後の文字だけが全 advance (N×font_size) を持つ状態
+だった。
 
-**根本原因（未解決）**: HarfBuzz TTB方向テキストへの誤った `hb_buffer_reverse_clusters()`
-呼び出し（`lvfntman.cpp:2968`）が `m_advance` を不正確にし（多くの文字が advance=0）、
-`char_count_adv` はそのワークアラウンド。TTB reversal を削除すると m_advance は正確になるが、
-ルビ付き漢字の `node_fmt.setX(frmline->x + word->x)` 経由の縦位置が大幅にずれる副作用が
-あり、deeper な設計調査が必要。
+修正内容 (`FORMATTING_VERSION_ID 0x003B → 0x003C`):
+- `lvfntman.cpp`: TTB ブランチの `hb_buffer_reverse_clusters()` 削除
+- `lvtextfm_layout_v.cpp`: `char_count_adv` を `adv_available==false` 時のみ発動させ
+  正確な `m_advance` を主ゲートに
+- `lvtextfm_layout_h.cpp`: `is_neg_width > 0x8000` ワークアラウンド削除
+
+残る高さのばらつき: 短い段落が列の途中で終わることによる空白（行頭揃えの仕様）。
 
 ### P9 — 回転グリフの bearing/position 補正欠落
 
