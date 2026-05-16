@@ -145,6 +145,19 @@ bool LVDocView::isVerticalText() const {
 | **P1 FIXED**: Ruby base characters now align with body text in vertical-rl, annotations overhang into inter-column gap (per JLReq) | visually verified with sanshiro.epub and sorekara.epub |
 | Body char centering in ruby-inflated columns: only apply `(strut-em)/2` when `frmline->height <= strut`; in inflated columns x0=line_x-frmh is already correct (debug-verified 4px fix) | `lvtextfm_layout_h.cpp:~3602` |
 | **Page gap FIXED**: content missing/duplicated between pages in vertical-rl | 7 fixes across `lvdocview.cpp`, `lvrend.cpp`, `lvpagesplitter.{h,cpp}`, `lvtinydom.cpp` — see "Px" entry below |
+| **縦中横 (TCY)**: numbers/short horizontal text in vertical columns | `cssdef.h`, `lvstyles.h`, `lvstsheet.cpp`, `lvstyles.cpp`, `lvrend.cpp`, `lvtextfm_layout_h.cpp` |
+| **圏点（傍点）text-emphasis**: CSS text-emphasis parsed and drawn (●○﹅etc.) | `cssdef.h`, `lvstyles.h`, `lvtextfm.h`, `lvstsheet.cpp`, `lvstyles.cpp`, `lvrend.cpp`, `lvtextfm.cpp`, `lvtextfm_layout_h.cpp` |
+| **禁則処理**: hanging punct guard (`!is_vertical_mode`); ぶら下げ禁則 for 。and 、 | `lvtextfm_layout_h.cpp`, `lvtextfm_layout_v.cpp` |
+| **ルビUI改善**: `docToWindowPoint` clamps screen_y to page_bottom instead of rejecting | `lvdocview.cpp` |
+
+### Frontend (Lua) improvements
+
+| Feature | Location |
+|---------|----------|
+| **テキスト選択**: `onHold` uses Lua sboxes for vertical rolling docs (no scattered boxes) | `readerhighlight.lua` |
+| **underscore highlight**: draws vertical 傍線 on right edge of column (before-direction) | `readerview.lua` |
+| **strikeout highlight**: draws vertical line through column center | `readerview.lua` |
+| **縦書きフッター**: progress bar `invert_direction=true` fills right→left + mirrors TOC ticks | `readerfooter.lua` |
 
 **Known limitation**: some EPUBs (e.g. `それから.epub`) have stray U+0020
 whitespace in their HTML between `</ruby>` and the next character (from
@@ -225,13 +238,14 @@ stale page boundaries.
 
 ### P4 — Ruby sbox root cause (getRect/getAbsRect for rt-descendant nodes)
 
-**Symptom suppressed** by `docToWindowPoint` screen_y bounds check
-(`lvdocview.cpp:2748-2768`). Regression-guarded by `Ruby annotation sboxes #ruby`
-tests in `spec/unit/vertical_text_spec.lua`.
+**Partially fixed**: `docToWindowPoint` now clamps `screen_y` to `page_bottom`
+instead of returning false when annotation chars overflow the column height.
+This means near-column-end annotation chars now produce a valid sbox at the page
+bottom instead of being silently dropped.
 
-**Root cause:** `getRect` for text inside `<rt>` adds `frmline->x + word->x` (vertical
-offset within the annotation cell) onto `rc.left` (= inlineBox.X = base doc_x). For
-deeply-stacked annotation chars, this sum exceeds page_height → off-screen sbox.
+**Root cause (still open):** `getRect` for text inside `<rt>` adds `frmline->x + word->x`
+(vertical offset within the annotation cell) onto `rc.left` (= inlineBox.X = base doc_x).
+For deeply-stacked annotation chars, this sum exceeds page_height → clamps to page_bottom.
 
 To investigate: uncomment the `print(...)` line in the ruby annotation sbox test,
 run `./kodev test front -f "Ruby annotation"`, and capture sbox.y values.
