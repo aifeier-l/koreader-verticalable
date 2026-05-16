@@ -700,23 +700,45 @@ function ReaderView:drawHighlightRect(bb, _x, _y, rect, drawer, color, draw_note
         if not color then
             color = Blitbuffer.COLOR_GRAY_4
         end
-        if Blitbuffer.isColor8(color) then
-            bb:paintRect(x, y + h - 1, w, Size.line.thick, color)
+        local is_vertical = self.document and self.document.isVerticalText and self.document:isVerticalText()
+        if is_vertical then
+            -- In vertical-rl, draw a 傍線 (sideline) on the right edge of the column
+            -- (the "before" / annotation side), running the full selection height.
+            if Blitbuffer.isColor8(color) then
+                bb:paintRect(x + w - Size.line.thick, y, Size.line.thick, h, color)
+            else
+                bb:paintRectRGB32(x + w - Size.line.thick, y, Size.line.thick, h, Screen.night_mode and color:invert() or color)
+            end
         else
-            bb:paintRectRGB32(x, y + h - 1, w, Size.line.thick, Screen.night_mode and color:invert() or color)
+            if Blitbuffer.isColor8(color) then
+                bb:paintRect(x, y + h - 1, w, Size.line.thick, color)
+            else
+                bb:paintRectRGB32(x, y + h - 1, w, Size.line.thick, Screen.night_mode and color:invert() or color)
+            end
         end
     elseif drawer == "strikeout" then
         if not color then
             color = Blitbuffer.COLOR_BLACK
         end
-        local line_y = y + math.floor(h / 2) + 1
-        if self.ui.paging then
-            line_y = line_y + 2
-        end
-        if Blitbuffer.isColor8(color) then
-            bb:paintRect(x, line_y, w, Size.line.medium, color)
+        local is_vertical = self.document and self.document.isVerticalText and self.document:isVerticalText()
+        if is_vertical then
+            -- In vertical-rl, draw a vertical strikeout through the column center.
+            local line_x = x + math.floor(w / 2) - math.floor(Size.line.medium / 2)
+            if Blitbuffer.isColor8(color) then
+                bb:paintRect(line_x, y, Size.line.medium, h, color)
+            else
+                bb:paintRectRGB32(line_x, y, Size.line.medium, h, Screen.night_mode and color:invert() or color)
+            end
         else
-            bb:paintRectRGB32(x, line_y, w, Size.line.medium, Screen.night_mode and color:invert() or color)
+            local line_y = y + math.floor(h / 2) + 1
+            if self.ui.paging then
+                line_y = line_y + 2
+            end
+            if Blitbuffer.isColor8(color) then
+                bb:paintRect(x, line_y, w, Size.line.medium, color)
+            else
+                bb:paintRectRGB32(x, line_y, w, Size.line.medium, Screen.night_mode and color:invert() or color)
+            end
         end
     elseif drawer == "invert" then
         bb:invertRect(x, y, w, h)

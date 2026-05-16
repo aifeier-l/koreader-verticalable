@@ -1797,11 +1797,29 @@ function ReaderHighlight:onHold(arg, ges)
             end
         end
 
+        local is_vertical = self.ui.document.isVerticalText and self.ui.document:isVerticalText()
         if self.ui.paging then
             self.view.highlight.temp[self.hold_pos.page] = self.selected_text.sboxes
             -- Unfortunately, getWordFromPosition() may not return good coordinates,
             -- so refresh the whole page
             UIManager:setDirty(self.dialog, "ui")
+        elseif is_vertical and self.ui.rolling and self.selected_text.sboxes and #self.selected_text.sboxes > 0 then
+            -- Vertical-rl: native crengine selection draws scattered per-word boxes.
+            -- Use Lua-side invert boxes (same as onHoldPan) for a cleaner appearance.
+            self.ui.document:clearSelection()
+            local sboxes = self.selected_text.sboxes
+            local margins = self.ui.document:getPageMargins()
+            local dx = margins and margins.right or 0
+            if dx ~= 0 then
+                local shifted = {}
+                for _, sb in ipairs(sboxes) do
+                    table.insert(shifted, Geom:new{
+                        x = sb.x + dx, y = sb.y, w = sb.w, h = sb.h })
+                end
+                sboxes = shifted
+            end
+            self.view.highlight.temp[self.hold_pos.page] = sboxes
+            UIManager:setDirty(self.dialog, "ui", Geom.boundingBox(sboxes))
         else
             -- With crengine, getWordFromPosition() does return good coordinates.
             UIManager:setDirty(self.dialog, "ui", Geom.boundingBox(self.selected_text.sboxes))
