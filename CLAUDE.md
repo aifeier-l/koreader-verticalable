@@ -241,19 +241,12 @@ together:
 `FORMATTING_VERSION_ID` 0x0034 → 0x0036 invalidates caches with
 stale page boundaries.
 
-### P4 — Ruby sbox root cause (getRect/getAbsRect for rt-descendant nodes)
+### P4 — Ruby sbox root cause (getRect/getAbsRect for rt-descendant nodes) — **FIXED**
 
-**Partially fixed**: `docToWindowPoint` now clamps `screen_y` to `page_bottom`
-instead of returning false when annotation chars overflow the column height.
-This means near-column-end annotation chars now produce a valid sbox at the page
-bottom instead of being silently dropped.
-
-**Root cause (still open):** `getRect` for text inside `<rt>` adds `frmline->x + word->x`
-(vertical offset within the annotation cell) onto `rc.left` (= inlineBox.X = base doc_x).
-For deeply-stacked annotation chars, this sum exceeds page_height → clamps to page_bottom.
-
-To investigate: uncomment the `print(...)` line in the ruby annotation sbox test,
-run `./kodev test front -f "Ruby annotation"`, and capture sbox.y values.
+`renderCells` の `vert_ruby` 判定が `table_style->writing_mode == css_wm_inherit` の場合に
+`false` となりルビセルに `setX(cell->col->x)` が適用される問題を修正。
+DOM ウォークで親チェーンを遡り effective writing-mode を解決する方式に変更。
+`FORMATTING_VERSION_ID 0x0042 → 0x0043` でキャッシュ無効化。
 
 ### P5 — docToWindowPoint screen_y offset (~9px)
 
@@ -307,15 +300,18 @@ wrapPos として残り、`y0 = clip.bottom` に配置されて不可視にな�
    `> maxH` から `>= maxH` に変更。`m_advance == maxH` の文字（y0 = clip.bottom = 不可視）
    を次列の先頭に送る。
 
-### P9 — 回転グリフの bearing/position 補正欠落
+### P9 — 回転グリフの bearing/position 補正欠落 — **FIXED**
 
-（旧タスク #1）`drawGlyphItemRotated90CW` で 90° 回転後の glyph に
-bearing/origin 補正が入っていないため、回転グリフが列内でずれる可能性。
+`drawGlyphItemRotated90CW` の 90° 回転後グリフ配置を bearing-correct 公式に変更:
+`correct_x = x + _baseline - origin_y`、`correct_y = y + _size - origin_x - bmp_w`
+ー・…・括弧など +vert 代替形を持たないフォントでの 2〜4px ずれを解消。
 
-### P10 — ルビインラインボックスの実 advance と word->x 不整合
+### P10 — ルビインラインボックスの実 advance と word->x 不整合 — **FIXED**
 
-（旧タスク #2）measureText で計算したルビ inline box の advance と、
-Draw 時の word->x が整合していない場合に位置ズレが生じる。
+`processParagraphVertical` の `char_count_adv` 安全ネットがルビグループ（inline box）を
+1 × avg_char_advance としか数えなかったため、N 文字のルビ後の本文字が
+`clip.bottom` を超えて不可視になる問題を修正。`inline_box_extra` で超過分を
+累積し `char_count_adv` に加算。P11 と同クラスのバグ。
 
 ### P14 — ルビ基文字がまれに上の文字と重なる（既知の未解決問題）
 
