@@ -265,14 +265,11 @@ coordinate origin differs from screen Y=0. Low impact; noted as a known inaccura
 - Mixed horizontal/vertical blocks in one document
 - Floats in vertical mode (currently disabled)
 
-### P7 — ページ進行方向が左→右固定
+### P7 — ページ進行方向が左→右固定 — **FIXED**
 
-vertical-rl では本来ページは右→左に進む（第1列が画面右端、次ページへは左方向）。
-現状のページ送り・タップゾーン・スワイプ方向などが水平モードと同じ左→右前提に
-なっている可能性がある。調査・修正が必要。
-
-関連箇所: `frontend/` のタップ/スワイプハンドラ、`ReaderPaging` / `ReaderView`、
-`lvdocview.cpp` のページナビゲーション API。
+縦書きドキュメントで RTL ページ送りを自動設定し、開くたびに強制適用。
+左右矢印キーのナビゲーションも右→左列進行に合わせて反転。
+(`73b5f5d9c` "vertical-rl: enforce RTL page turn direction and reverse arrow keys")
 
 ### P8 — 列末位置の不統一（行末がバラバラ）— **FIXED**
 
@@ -320,20 +317,62 @@ bearing/origin 補正が入っていないため、回転グリフが列内で�
 （旧タスク #2）measureText で計算したルビ inline box の advance と、
 Draw 時の word->x が整合していない場合に位置ズレが生じる。
 
+### P13 — Option C ブランチ（CSS 論理プロパティによる書き直し）
+
+**ブランチ**: `vertical-rl-option-c`（crengine: `vertical-rl-option-c`）
+
+**根本的な改善**: Y=X スワップモデルで CSS 物理プロパティが誤方向にマップされていた問題を解決。
+
+```
+旧 (ja-typography Y=X swap):
+  CSS padding-left → doc-X → screen-Y オフセット
+  → body>div>p で bvo=75、body>p で bvo=29 → 段差発生
+
+新 (Option C, CSSLogical):
+  CSS padding-left → block-direction (screen-X 方向インデント)
+  CSS padding-top  → inline-direction (screen-Y 方向)
+  → 全 body 段落で bvo=0 → 段差なし、均一な列開始位置
+```
+
+**実装 (upstream HEAD からの追加のみ、soft fork)**:
+
+| Phase | 変更 | 既存コードへの影響 |
+|---|---|---|
+| 0 | `lvlogical.h` 新規追加（CSS 論理プロパティインデックスヘルパー） | ゼロ |
+| 1 | CSS パース（writing-mode / TCY / text-emphasis）+ HarfBuzz TTB | 追加のみ |
+| 2a | FlowState + ページ分割（Y=X swap は page splitter 用途で保持） | lvrend.cpp |
+| 2b | `CSSLogical` を `renderBlockElementEnhanced` / `DrawDocument` / BVO に適用 | インデックス値変更のみ |
+
+**テスト結果**: 84/84 (新テスト `vertical_option_c_spec.lua` を含む)
+- 全列が screen top ≈ 15px から始まる（100%確認済み）
+- 段差なし、P12 glyph clip も自然解消（bvo=0 → maxH=755 → column fill to edge）
+
+**upstream 追跡性**:
+- `lvlogical.h` は完全新規（コンフリクトゼロ）
+- `renderBlockElementEnhanced` の変更は「インデックス値を変える」だけ（ロジック不変）
+- upstream の機能追加とほぼ衝突しない設計
+
+**次のステップ**:
+- 視覚検証（エミュレータで実際の縦書き EPUB を確認）
+- option-c ブランチを master にマージするかの判断
+- Option B（DrawDocument doc_x 修正）は Option C で不要になった（CSSLogical が自然に解決）
+
 ## Key File Locations
 
 ```
 base/                                           crengine submodule
   cre.cpp                                       KOReader↔crengine bridge
-  thirdparty/kpvcrlib/crengine/crengine/src/
-    lvrend.cpp                                  Block rendering, FlowState
-    lvtextfm_layout_h.cpp                       Text formatter draw & layout
-    lvtextfm.cpp                                measureText, ruby inline box
-    lvdocview.cpp                               windowToDocPoint, docToWindowPoint, isVerticalText
-    lvfntman.cpp                                HarfBuzz font shaping, +vert features
-    lvtinydom.cpp                               DOM, getAbsRect, getRect, getSegmentRects
+  thirdparty/kpvcrlib/crengine/crengine/
+    include/lvlogical.h                         CSS logical property index helpers (Option C)
+    src/lvrend.cpp                              Block rendering, FlowState
+    src/lvtextfm_layout_h.cpp                   Text formatter draw & layout
+    src/lvtextfm.cpp                            measureText, ruby inline box
+    src/lvdocview.cpp                           windowToDocPoint, docToWindowPoint, isVerticalText
+    src/lvfntman.cpp                            HarfBuzz font shaping, +vert features
+    src/lvtinydom.cpp                           DOM, getAbsRect, getRect, getSegmentRects
 frontend/document/credocument.lua               Lua wrappers: getWordFromPosition, getTextFromPositions
 spec/unit/vertical_text_spec.lua                Formal regression tests
+spec/unit/vertical_option_c_spec.lua            Option C: uniform column y_base test
 ```
 
 ## Test EPUB
