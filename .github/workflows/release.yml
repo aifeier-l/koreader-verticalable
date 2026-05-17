@@ -1,0 +1,173 @@
+name: Release builds
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. v2025.05)'
+        required: true
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  MAKEFLAGS: "PARALLEL_JOBS=3 OUTPUT_DIR=build"
+
+jobs:
+
+  kindle:
+    name: Kindle
+    runs-on: ubuntu-latest
+    container:
+      image: koreader/kokindle:0.4.6-22.04
+    env:
+      TARGET: kindle
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch submodules
+        run: make fetchthirdparty
+      - name: Build
+        run: source /home/ko/.bashrc && make TARGET=kindle
+      - name: Package
+        run: source /home/ko/.bashrc && make TARGET=kindle update
+      - name: Rename for release
+        run: |
+          cp koreader-kindle-*.zip koreader-kindle-latest-stable.zip || true
+          ls *.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kindle
+          path: koreader-kindle-latest-stable.zip
+
+  kindlehf:
+    name: Kindle (HF)
+    runs-on: ubuntu-latest
+    container:
+      image: koreader/kokindle:0.4.6-22.04
+    env:
+      TARGET: kindlehf
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch submodules
+        run: make fetchthirdparty
+      - name: Build
+        run: source /home/ko/.bashrc && make TARGET=kindlehf
+      - name: Package
+        run: source /home/ko/.bashrc && make TARGET=kindlehf update
+      - name: Rename for release
+        run: cp koreader-kindlehf-*.zip koreader-kindlehf-latest-stable.zip || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kindlehf
+          path: koreader-kindlehf-latest-stable.zip
+
+  kobo:
+    name: Kobo
+    runs-on: ubuntu-latest
+    container:
+      image: koreader/kokobo:0.4.6-22.04
+    env:
+      TARGET: kobo
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch submodules
+        run: make fetchthirdparty
+      - name: Build
+        run: source /home/ko/.bashrc && make TARGET=kobo
+      - name: Package
+        run: source /home/ko/.bashrc && make TARGET=kobo update
+      - name: Rename for release
+        run: cp koreader-kobo-*.zip koreader-kobo-latest-stable.zip || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kobo
+          path: koreader-kobo-latest-stable.zip
+
+  android-arm:
+    name: Android (ARM)
+    runs-on: ubuntu-latest
+    container:
+      image: koreader/koandroid:0.9.6-22.04
+    env:
+      TARGET: android
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch submodules
+        run: make fetchthirdparty
+      - name: Build
+        run: source /home/ko/.bashrc && make TARGET=android
+      - name: Package
+        run: source /home/ko/.bashrc && make TARGET=android update
+      - name: Rename for release
+        run: cp koreader-android-*.apk koreader-android-latest-stable.apk 2>/dev/null || \
+             cp koreader-android-*.zip koreader-android-latest-stable.zip 2>/dev/null || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-arm
+          path: koreader-android-latest-stable.*
+
+  release:
+    name: Create Release
+    needs: [kindle, kindlehf, kobo, android-arm]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Determine tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "RELEASE_TAG=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
+          else
+            echo "RELEASE_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+          fi
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: List artifacts
+        run: find artifacts/ -type f | sort
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: "koreader-tategumi ${{ env.RELEASE_TAG }}"
+          body: |
+            ## koreader-tategumi ${{ env.RELEASE_TAG }}
+
+            KOReader fork with Japanese vertical text (縦書き/tategumi) rendering support.
+
+            ### Downloads
+            | Platform | File |
+            |----------|------|
+            | Kindle (legacy) | `koreader-kindle-latest-stable.zip` |
+            | Kindle (HF) | `koreader-kindlehf-latest-stable.zip` |
+            | Kobo | `koreader-kobo-latest-stable.zip` |
+            | Android | `koreader-android-latest-stable.*` |
+
+            ### Install
+            See [KOReader installation guide](https://github.com/koreader/koreader/wiki/Installation).
+
+            In-app OTA update is supported. Go to **Menu → Help → Check for updates**.
+          files: artifacts/**/*
+          draft: false
+          prerelease: false

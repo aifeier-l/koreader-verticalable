@@ -9,7 +9,7 @@
 	url = https://github.com/koreader/ubuntu-touch-sdl-template
 [submodule "test"]
 	path = test
-	url = https://github.com/koreader/test-data.git
+	url = https://github.com/m-tky/koreader-test-data.git
 	shallow = true
 [submodule "resources/fonts"]
 	path = resources/fonts

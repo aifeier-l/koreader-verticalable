@@ -22,20 +22,12 @@ local ota_dir = DataStorage:getDataDir() .. "/ota/"
 
 local OTAManager = {
     -- NOTE: Each URL *MUST* end with a /
+    -- Use m-tky/koreader-tategumi GitHub Releases as the OTA source.
     ota_servers = {
-        "http://ota.koreader.rocks/",
-        --[[
-        -- NOTE: Seems down? Ping @chrox ;).
-        "http://vislab.bjmu.edu.cn/apps/koreader/ota/",
-        --]]
-        "http://koreader-fr.ak-team.com/",
-        "http://koreader-pl.ak-team.com/",
-        "http://koreader-na.ak-team.com/",
-        "http://koreader.ak-team.com/",
+        "https://github.com/m-tky/koreader-tategumi/releases/latest/download/",
     },
     ota_channels = {
         "stable",
-        "nightly",
     },
     link_template = "koreader-%s-latest-%s",
     zsync_template = "koreader-%s-latest-%s.zsync",
