@@ -1,0 +1,57 @@
+name: Sync from upstream koreader
+
+on:
+  schedule:
+    - cron: '0 2 * * 1'  # Every Monday at 02:00 UTC
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+
+      - name: Merge from upstream koreader
+        run: |
+          git remote add upstream https://github.com/koreader/koreader.git
+          git fetch upstream master
+
+          # Merge upstream; abort and open issue on conflict
+          if ! git merge upstream/master --no-edit; then
+            git merge --abort
+            echo "MERGE_FAILED=true" >> $GITHUB_ENV
+          fi
+
+      - name: Restore our .gitmodules (pin base to m-tky/koreader-base)
+        if: env.MERGE_FAILED != 'true'
+        run: |
+          git checkout HEAD -- .gitmodules
+          if ! git diff --quiet HEAD .gitmodules; then
+            git add .gitmodules
+            git commit --amend --no-edit
+          fi
+
+      - name: Push
+        if: env.MERGE_FAILED != 'true'
+        run: git push origin master
+
+      - name: Create issue on merge conflict
+        if: env.MERGE_FAILED == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: 'Upstream sync failed: merge conflict',
+              body: 'Automatic sync from koreader/koreader failed due to a merge conflict. Manual resolution required.\n\nWorkflow run: ' + context.serverUrl + '/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.runId,
+              labels: ['upstream-sync'],
+            });
