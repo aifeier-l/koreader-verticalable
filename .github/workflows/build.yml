@@ -110,8 +110,10 @@ jobs:
           clean: false
           fetch-depth: 0
           fetch-tags: true
-          filter: tree:0
           show-progress: false
+
+      - name: Fetch tags (ensure git describe works for version_spec)
+        run: git fetch --tags --force
 
       - name: Fetch
         run: make fetchthirdparty
