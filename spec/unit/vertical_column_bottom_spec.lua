@@ -30,7 +30,6 @@ describe("Vertical column bottom", function()
     local DocumentRegistry, ReaderUI, UIManager, Screen
     local epub_candidates = {
         "spec/front/unit/data/fixtures/vertical_text/sanshiro.epub",
-        "/home/user/Code/koreader/三四郎.epub",
         "spec/front/unit/data/fixtures/vertical_text/simple_ja_noruby.epub",
     }
     local epub_path

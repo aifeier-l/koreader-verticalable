@@ -34,8 +34,8 @@ local lfs = require("libs/libkoreader-lfs")
 describe("Ruby annotation Y alignment", function()
     local DocumentRegistry, ReaderUI, UIManager, Screen
     local epub_candidates = {
+        "spec/front/unit/data/fixtures/vertical_text/sanshiro.epub",
         "三四郎.epub",
-        "/home/user/Code/koreader/三四郎.epub",
     }
     local epub_path
     for _, p in ipairs(epub_candidates) do
@@ -96,7 +96,7 @@ describe("Ruby annotation Y alignment", function()
 
         it("ruby tables are detected as vertical (no Y displacement bug) #ruby_annot_y", function()
             if not epub_found then
-                pending("三四郎.epub not found in KOReader root — skipping")
+                pending("sanshiro.epub not found in fixtures — skipping")
                 return
             end
 
@@ -142,7 +142,7 @@ describe("Ruby annotation Y alignment", function()
 
         it("resetRubyDiag / getRubyDiagStats API is available #ruby_annot_y", function()
             if not epub_found then
-                pending("三四郎.epub not found")
+                pending("sanshiro.epub not found")
                 return
             end
 

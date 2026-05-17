@@ -21,10 +21,9 @@ local lfs = require("libs/libkoreader-lfs")
 
 describe("Vertical bleed", function()
     local DocumentRegistry, ReaderUI, UIManager, Screen
-    -- Try both root-relative and absolute paths
     local epub_candidates = {
+        "spec/front/unit/data/fixtures/vertical_text/sanshiro.epub",
         "三四郎.epub",
-        "/home/user/Code/koreader/三四郎.epub",
     }
     local epub_path
     for _, p in ipairs(epub_candidates) do
@@ -80,7 +79,7 @@ describe("Vertical bleed", function()
 
         it("has no upward character bleed across first 100 pages", function()
             if not epub_found then
-                pending("三四郎.epub not found in KOReader root — skipping")
+                pending("sanshiro.epub not found in fixtures — skipping")
                 return
             end
 
@@ -131,7 +130,7 @@ describe("Vertical bleed", function()
 
         it("has resetVertBleedCounters / getVertBleedStats API", function()
             if not epub_found then
-                pending("三四郎.epub not found")
+                pending("sanshiro.epub not found")
                 return
             end
 

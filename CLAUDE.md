@@ -147,7 +147,7 @@ bool LVDocView::isVerticalText() const {
 | Strikeout highlight: vertical line through column center | `readerview.lua` |
 | Vertical footer: progress bar fills right→left, TOC ticks mirrored | `readerfooter.lua` |
 
-**Known limitation**: some EPUBs (e.g. `それから.epub`) have stray U+0020 whitespace in
+**Known limitation**: some EPUBs have stray U+0020 whitespace in
 their HTML between `</ruby>` and the next character. With `white-space: normal` this
 renders as a visible ~1-char gap. This appears in horizontal mode too — it is a property
 of the EPUB source, not a rendering bug.
@@ -205,7 +205,7 @@ Fix (`FORMATTING_VERSION_ID 0x003C → 0x003D`):
 ### P1 — Ruby base character alignment — FIXED
 
 Ruby base characters now align with surrounding body text in vertical-rl. Annotations
-overhang into the inter-column gap per JLReq. Verified with sanshiro.epub and sorekara.epub.
+overhang into the inter-column gap per JLReq. Verified with sanshiro.epub.
 
 ### P13 — Option C: CSS logical property rewrite — DONE (merged to master)
 
@@ -296,9 +296,8 @@ spec/unit/ruby_annot_y_spec.lua                 Ruby cell placement regression
 
 ## Test EPUBs
 
-`三四郎.epub` (Natsume Soseki, has ruby annotations) — main manual testing EPUB.
-`simple_ja_noruby.epub` — formal tests (no ruby, simpler structure).
-`それから.epub` — manual testing with ruby.
+`test/fixtures/vertical_text/sanshiro.epub` (三四郎, Natsume Soseki) — main test EPUB with ruby annotations.
+`test/fixtures/vertical_text/simple_ja_noruby.epub` — formal unit tests (no ruby, simpler structure).
 
-`三四郎.epub` has its own `writing-mode: vertical-rl` CSS; no style tweak needed.
+`sanshiro.epub` has its own `writing-mode: vertical-rl` CSS; no style tweak needed.
 Other EPUBs require: `body { writing-mode: vertical-rl !important; }` via style tweak.

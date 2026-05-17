@@ -14,8 +14,8 @@ which indicates a staircase / y_base mismatch.
 describe("Option C: uniform column y_base", function()
     local epub_path
     for _, p in ipairs({
+        "spec/front/unit/data/fixtures/vertical_text/sanshiro.epub",
         "spec/front/unit/data/fixtures/vertical_text/simple_ja_noruby.epub",
-        "/home/user/Code/koreader/三四郎.epub",
     }) do
         local f = io.open(p, "r")
         if f then f:close(); epub_path = p; break end
