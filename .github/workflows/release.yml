@@ -29,6 +29,7 @@ jobs:
     container:
       image: koreader/kokindle:0.4.6-22.04
     env:
+      BASH_ENV: /home/ko/.bashrc
       TARGET: kindle
     steps:
       - uses: actions/checkout@v4
@@ -37,9 +38,9 @@ jobs:
       - name: Fetch submodules
         run: make fetchthirdparty
       - name: Build
-        run: source /home/ko/.bashrc && make TARGET=kindle
+        run: make TARGET=kindle
       - name: Package
-        run: source /home/ko/.bashrc && make TARGET=kindle update
+        run: make TARGET=kindle update
       - name: Rename for release
         run: |
           cp koreader-kindle-*.zip koreader-kindle-latest-stable.zip || true
@@ -55,6 +56,7 @@ jobs:
     container:
       image: koreader/kokindle:0.4.6-22.04
     env:
+      BASH_ENV: /home/ko/.bashrc
       TARGET: kindlehf
     steps:
       - uses: actions/checkout@v4
@@ -63,9 +65,9 @@ jobs:
       - name: Fetch submodules
         run: make fetchthirdparty
       - name: Build
-        run: source /home/ko/.bashrc && make TARGET=kindlehf
+        run: make TARGET=kindlehf
       - name: Package
-        run: source /home/ko/.bashrc && make TARGET=kindlehf update
+        run: make TARGET=kindlehf update
       - name: Rename for release
         run: cp koreader-kindlehf-*.zip koreader-kindlehf-latest-stable.zip || true
       - uses: actions/upload-artifact@v4
@@ -79,6 +81,7 @@ jobs:
     container:
       image: koreader/kokobo:0.4.6-22.04
     env:
+      BASH_ENV: /home/ko/.bashrc
       TARGET: kobo
     steps:
       - uses: actions/checkout@v4
@@ -87,9 +90,9 @@ jobs:
       - name: Fetch submodules
         run: make fetchthirdparty
       - name: Build
-        run: source /home/ko/.bashrc && make TARGET=kobo
+        run: make TARGET=kobo
       - name: Package
-        run: source /home/ko/.bashrc && make TARGET=kobo update
+        run: make TARGET=kobo update
       - name: Rename for release
         run: cp koreader-kobo-*.zip koreader-kobo-latest-stable.zip || true
       - uses: actions/upload-artifact@v4
@@ -103,6 +106,7 @@ jobs:
     container:
       image: koreader/koandroid:0.9.6-22.04
     env:
+      BASH_ENV: /home/ko/.bashrc
       TARGET: android
     steps:
       - uses: actions/checkout@v4
@@ -111,9 +115,9 @@ jobs:
       - name: Fetch submodules
         run: make fetchthirdparty
       - name: Build
-        run: source /home/ko/.bashrc && make TARGET=android
+        run: make TARGET=android
       - name: Package
-        run: source /home/ko/.bashrc && make TARGET=android update
+        run: make TARGET=android update
       - name: Rename for release
         run: cp koreader-android-*.apk koreader-android-latest-stable.apk 2>/dev/null || \
              cp koreader-android-*.zip koreader-android-latest-stable.zip 2>/dev/null || true
