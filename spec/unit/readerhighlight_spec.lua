@@ -109,10 +109,33 @@ describe("Readerhighlight module", function()
             assert.Equals('My nake', readerui.annotation.annotations[1].text)
         end)
         it("should response on tap gesture", function()
-            -- NOTE: crengine vertical-rl changes shift page layout so the original
-            -- tap coordinates (106,271)-(370,314) no longer hit text on page 10.
-            -- Pending until coordinates are updated for our rendering.
-            pending("tap coordinates need updating for our crengine rendering")
+            local w, h = Screen:getWidth(), Screen:getHeight()
+            -- Find two lines of text dynamically so the test is robust across
+            -- crengine rendering changes that shift page layout.
+            local doc = readerui.document
+            local line1_y, line2_y
+            for y = math.floor(h * 0.2), math.floor(h * 0.85), 8 do
+                local ok, word = pcall(function()
+                    return doc:getWordFromPosition({x = math.floor(w * 0.5), y = y})
+                end)
+                if ok and word and word.sbox then
+                    local sb = word.sbox
+                    if not line1_y then
+                        line1_y = sb.y + math.floor(sb.h / 2)
+                    elseif sb.y > line1_y + sb.h and not line2_y then
+                        line2_y = sb.y + math.floor(sb.h / 2)
+                        break
+                    end
+                end
+            end
+            assert.truthy(line1_y and line2_y, "Could not find two text lines on page 10")
+            local x_left  = math.floor(w * 0.15)
+            local x_right = math.floor(w * 0.85)
+            local x_mid   = math.floor(w * 0.50)
+            tap_highlight_text("readerhighlight_epub_tap.png",
+                               Geom:new{ x = x_left,  y = line1_y },
+                               Geom:new{ x = x_right, y = line2_y },
+                               Geom:new{ x = x_mid,   y = math.floor((line1_y + line2_y) / 2) })
         end)
     end)
 
