@@ -252,8 +252,10 @@ function FileChooser:genItemTable(dirs, files, path)
     end
 
     if path then -- file browser or PathChooser
-        if path ~= "/" and not (G_reader_settings:isTrue("lock_home_folder") and
-                                path == G_reader_settings:readSetting("home_dir")) then
+        if path ~= "/"
+            and not (G_reader_settings:isFalse("show_parent_folder") and self.name == "filemanager")
+            and not (G_reader_settings:isTrue("lock_home_folder") and path == G_reader_settings:readSetting("home_dir"))
+        then
             table.insert(item_table, 1, {
                 text = BD.mirroredUILayout() and BD.ltr("../ ⬆") or "⬆ ../",
                 path = path.."/..",
