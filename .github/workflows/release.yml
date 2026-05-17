@@ -118,6 +118,17 @@ jobs:
         run: make TARGET=android
       - name: Package
         run: make TARGET=android update
+      - name: Sign APK
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > /tmp/release.keystore
+          APKSIGNER=$(find "${ANDROID_HOME}/build-tools" -name apksigner | sort -V | tail -1)
+          "${APKSIGNER}" sign \
+            --ks /tmp/release.keystore \
+            --ks-pass "pass:${{ secrets.ANDROID_STORE_PASSWORD }}" \
+            --key-pass "pass:${{ secrets.ANDROID_KEY_PASSWORD }}" \
+            --ks-key-alias "${{ secrets.ANDROID_KEY_ALIAS }}" \
+            koreader-android-*.apk
+          rm -f /tmp/release.keystore
       - name: Rename for release
         run: cp koreader-android-*.apk koreader-android-latest-stable.apk 2>/dev/null || \
              cp koreader-android-*.zip koreader-android-latest-stable.zip 2>/dev/null || true
