@@ -39,8 +39,9 @@ body { writing-mode: vertical-rl !important; }
 
 ## Known limitations
 
-- **Vertical text EPUBs only.** Mixed horizontal/vertical layouts within a single document
-  are not supported. The entire document renders in one writing mode.
+- **Mixed horizontal/vertical layouts are not supported.** A single document renders
+  entirely in one writing mode. EPUBs that mix horizontal and vertical sections within
+  the same file may not display correctly.
 
 - **Highlight position is slightly off.** The highlight overlay drawn when you select text
   may be shifted by a few pixels from the actual characters. Reading is not affected.
