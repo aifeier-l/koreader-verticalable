@@ -248,6 +248,18 @@ becoming invisible (same bug class as P11).
 
 Fix: accumulate `inline_box_extra` for each inline box encountered, add to `char_count_adv`.
 
+### P14 — Ruby base character overlap with preceding character — FIXED
+
+Ruby inline boxes were not subject to the `vert_min_next_x` guard that prevents
+plain characters from overlapping. The fix attempt in `d6b9d1bd` was algebraically
+incorrect: it shifted both `x0` and `doc_x_ib` by the clamping delta, but
+`DrawDocument` accumulates `draw_x_rb = x0 + doc_x_ib + node.getX()`, so the two
+shifts cancelled and the inline box landed at its original unclamped position.
+
+Fix: keep `doc_x_ib = 0 - node_x` (anchored to layout position) and add the
+clamping delta only to `x0`. This makes `draw_x_rb = y + node_x + delta` (delta ≥ 0),
+preventing the ruby base group from starting before the preceding character ends.
+
 ## Open Issues
 
 ### P5 — docToWindowPoint screen_y offset (~9px)
@@ -262,17 +274,6 @@ doc_x. The fix is to subtract/add `clip.top` in the vertical branch of these two
 
 - Mixed horizontal/vertical blocks within one document
 - Floats in vertical mode (currently disabled)
-
-### P14 — Rare ruby base character overlap (known issue)
-
-The ruby group inline box starts at the same screen-Y as the preceding body character
-ends (0–1px gap). For ruby groups where annotation length > base length (e.g.
-かんしょう=45px > 癧症=44px), centering places the first annotation char at the
-end-Y of the preceding character (は). Anti-aliasing can cause 1–2px visual overlap.
-
-Root cause: JLReq requires 0.5px overhang spacing before such ruby groups, which is
-not yet implemented. Affects only groups where annotation chars > base chars; extremely
-rare in practice.
 
 ## Key File Locations
 

@@ -46,10 +46,6 @@ body { writing-mode: vertical-rl !important; }
 - **Highlight position is slightly off.** The highlight overlay drawn when you select text
   may be shifted by a few pixels from the actual characters. Reading is not affected.
 
-- **Ruby (furigana) characters may occasionally overlap slightly.** In rare cases, a ruby-annotated
-  character may intrude 1–2 px into the character above it due to anti-aliasing at glyph
-  boundaries. This does not affect readability.
-
 - **EPUBs with stray whitespace between ruby groups** may show a small gap between ruby
   groups and the following character. This is a property of the EPUB source, not a
   rendering bug.
