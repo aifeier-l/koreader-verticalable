@@ -5,6 +5,10 @@ on:
     - cron: '0 2 * * 1'  # Every Monday at 02:00 UTC
   workflow_dispatch:
 
+concurrency:
+  group: sync-upstream
+  cancel-in-progress: false
+
 jobs:
   sync:
     runs-on: ubuntu-latest
@@ -44,7 +48,14 @@ jobs:
 
       - name: Push
         if: env.MERGE_FAILED != 'true'
-        run: git push origin master
+        run: |
+          # Re-fetch in case another run pushed while we were working,
+          # then rebase our merge commit on top before pushing.
+          git fetch origin master
+          if ! git merge-base --is-ancestor origin/master HEAD; then
+            git rebase origin/master
+          fi
+          git push origin master
 
       - name: Create issue on merge conflict
         if: env.MERGE_FAILED == 'true'
