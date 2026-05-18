@@ -1,3 +1,60 @@
+# koreader-tategumi
+
+**KOReader fork with Japanese vertical text (縦書き / tategumi) support.**
+
+This is a personal fork of [KOReader](https://github.com/koreader/koreader) that adds
+`writing-mode: vertical-rl` rendering for Japanese novels in EPUB format.
+It is regularly synced with upstream KOReader.
+
+## Downloads
+
+| Platform | File |
+|----------|------|
+| Kindle (legacy) | `koreader-kindle-latest-stable.zip` |
+| Kindle (HF) | `koreader-kindlehf-latest-stable.zip` |
+| Kobo | `koreader-kobo-latest-stable.zip` |
+| Android (ARM64, most modern phones) | `koreader-android-arm64-latest-stable.apk` |
+| Android (ARM 32-bit) | `koreader-android-latest-stable.apk` |
+
+[Latest release](https://github.com/m-tky/koreader-tategumi/releases/latest)
+
+Installation steps are the same as upstream KOReader:
+[Android](https://github.com/koreader/koreader/wiki/Installation-on-Android-devices) •
+[Kindle](https://github.com/koreader/koreader/wiki/Installation-on-Kindle-devices) •
+[Kobo](https://github.com/koreader/koreader/wiki/Installation-on-Kobo-devices)
+
+In-app OTA update is supported. Go to **Menu → Help → Check for updates**.
+
+## Using vertical text
+
+EPUBs that already contain `writing-mode: vertical-rl` in their CSS (e.g. most commercial
+Japanese novels) will render in vertical mode automatically.
+
+For EPUBs that do not include this CSS, add the following via
+**Menu → Tools → Style tweaks → Custom CSS**:
+
+```css
+body { writing-mode: vertical-rl !important; }
+```
+
+## Known limitations
+
+- **Vertical text EPUBs only.** Mixed horizontal/vertical layouts within a single document
+  are not supported. The entire document renders in one writing mode.
+
+- **Highlight position is slightly off.** The highlight overlay drawn when you select text
+  may be shifted by a few pixels from the actual characters. Reading is not affected.
+
+- **Ruby (furigana) base characters may occasionally overlap with the character above.**
+  This happens rarely and only when the furigana annotation is longer than its base
+  character(s), causing 1–2 px visual overlap due to rounding. It does not affect readability.
+
+- **EPUBs with stray whitespace between ruby groups** may show a small gap between ruby
+  groups and the following character. This is a property of the EPUB source, not a
+  rendering bug.
+
+---
+
 [![KOReader](https://raw.githubusercontent.com/koreader/koreader.github.io/master/koreader-logo.png)](https://koreader.rocks)
 
 #### KOReader is a document viewer primarily aimed at e-ink readers.
