@@ -71,20 +71,108 @@ and `DrawDocument`, ensuring CSS padding/margin are applied in the correct direc
 
 ### Formatted text draw (lvtextfm_layout_h.cpp `LFormattedText::Draw`)
 
-At entry, x and y are swapped back to screen coordinates:
+#### Entry and page-level call
+
+`drawPageTo` calls `DrawDocument(buf, root, draw_x0, draw_y0, ...)` with:
+- `draw_x0 = clip.top` (screen-Y origin of the text area)
+- `draw_y0 = 0` (block-direction origin: "column 0 starts at clip.right")
+
+DrawDocument eventually calls `f->Draw(buf, draw_x0, draw_y0, ...)`.
+
+At Draw() entry, x and y are swapped back to screen coordinates:
 ```cpp
 if (is_vertical) { int tmp = x; x = y; y = tmp; }
+// After swap: x = draw_y0 = 0,  y = draw_x0 = clip.top
 int line_x = is_vertical ? (clip.right - x) : x;
-int line_y = y;
+// line_x = clip.right - 0 = clip.right  (for page-level call)
+int line_y = y;  // = clip.top
 ```
 
-Per-glyph positioning in vertical mode:
+#### Per-column drawing (frmlines)
+
+`line_x` starts at `clip.right` and decreases by `frmline->height` after each frmline.
+
+- Plain column: `frmline->height = strut_height`
+- Ruby-inflated column: `frmline->height = strut + annot_width`
+
+#### Plain character positioning
+
 ```cpp
-x0 = line_x - frmline->height - word->y;   // screen X (column position)
-y0 = y + frmline->x + clamped_x;           // screen Y (row position in column)
+x0 = line_x - frmline->height;          // left edge of column
+// Center on the column axis:
+if (em < strut) x0 += (strut - em) / 2; // (strut - em) / 2 centering
+y0 = y + frmline->x + clamped_x;        // screen Y = clip.top + indent + char advance
+// Glyph center = x0 + em/2 = line_x - strut/2  ✓
 ```
 
-Column progression: `line_x -= frmline->height` after each line.
+#### Inline box (ruby group) DrawDocument call
+
+When Draw() encounters an inline box (LTEXT_WORD_IS_OBJECT) word in vertical mode:
+
+```
+node_x = node_fmt.getX()  // inline-start offset (screen-Y direction)
+node_y = node_fmt.getY()  // block-direction offset (= accumulated column advance in block)
+x      = draw_y0 = 0      // current block's column-start offset from page-start
+
+x0     = y + node_x + clamp_delta   // screen-Y start of inner content
+y0     = x + node_y = 0 + node_y    // column offset of inline box (block-direction)
+doc_x_ib = 0 - node_x
+doc_y_ib = 0 - node_y               // ← needed to cancel inline box's own getY() (see below)
+DrawDocument(buf, node, x0, y0, dx, dy, doc_x_ib, doc_y_ib, ...)
+```
+
+#### DrawDocument recursion and doc_y accumulation
+
+**Critical**: DrawDocument FIRST applies `doc_x += fmt.getX()` and `doc_y += fmt.getY()` for
+the **current node** it was called on, before recursing into children.
+
+So when DrawDocument is called on the inline box node with `doc_y_ib = -node_y`:
+
+```
+Level 0: DrawDocument(inline_box)
+  doc_y += inline_box.getY()  → doc_y = -node_y + node_y = 0
+
+  Level 1: DrawDocument(ruby_table)   ruby_table.getY() = 0
+    doc_y += 0  → doc_y = 0
+
+    Level 2: DrawDocument(ruby_row)   row.getY() = 0
+      doc_y += 0  → doc_y = 0
+
+      Level 3a: DrawDocument(base_cell)   base_cell.getY() = annot_width
+        doc_y += annot_width  → doc_y = annot_width
+        f->Draw(buf, x0+doc_x, y0+doc_y=node_y+annot_width, ...)
+        → inner Draw: x_new = node_y + annot_width
+        → inner_line_x = clip.right − (node_y + annot_width)  ✓
+
+      Level 3b: DrawDocument(annot_cell)  annot_cell.getY() = 0
+        doc_y += 0  → doc_y = 0
+        f->Draw(buf, x0+doc_x, y0+doc_y=node_y, ...)
+        → inner Draw: x_new = node_y
+        → inner_line_x = clip.right − node_y  ✓
+```
+
+So `doc_y_ib = -node_y` is correct: it cancels the inline box's own `getY()` so the
+inner formatters receive the correct absolute column offsets.
+
+#### Ruby cell column positions (vertical-rl)
+
+For a ruby group with `node_y = N` (= accumulated column advance in block):
+
+| Cell | `cell.getY()` | `inner_line_x` | Glyph center |
+|------|--------------|----------------|--------------|
+| annotation | 0 | `clip.right − N` | annotation zone |
+| base text | `annot_width` | `clip.right − N − annot_width` | base text column |
+
+The base text column is `annot_width` to the left of `clip.right − N` (the annotation zone),
+which places it correctly: annotation occupies the inter-column space to the right of the base.
+
+#### Ruby column position (was P15 — fixed)
+
+`y0` and `doc_y_ib` were not initialised in the vertical inline-box draw
+branch of `LFormattedText::Draw()`.  In practice `y0 ≈ 0`, which forced
+every ruby group to draw at `clip.right − annot_width` regardless of its
+accumulated column advance `node_y`.  Fix: `y0 = x + node_y` and
+`doc_y_ib = 0 − node_y`.  Regression test: `vertical_ruby_column_spec.lua`.
 
 ### Coordinate conversion (lvdocview.cpp, cre.cpp)
 
@@ -116,28 +204,6 @@ bool LVDocView::isVerticalText() const {
 
 ## Implemented Features
 
-### crengine submodule (base/)
-
-| File | Change |
-|------|--------|
-| `lvrend.cpp` | FlowState: `c_x`, `l_x`, `isVertical()`, `addContentLine` dual advance, `page_h` swap, `getCurrentFlowAdvance/RelativeAdvance`, `newBlockLevel`/`leaveBlockLevel` c_x save/restore |
-| `lvrend.cpp` | `renderBlockElementEnhanced`: CSSLogical for all padding/margin indices |
-| `lvrend.cpp` | `DrawDocument`: plain `doc_x+x0+padding_left, doc_y+y0+padding_top` (no vert_shift hack) |
-| `lvtextfm_layout_h.cpp` | `Draw()`: x/y swap; `line_x = clip.right - x`; column draw; per-column clip; monotonic `vert_min_next_x` guard |
-| `lvtextfm_layout_h.cpp` | `Draw()`: sets `LFNT_HINT_IS_VERTICAL` in drawFlags |
-| `lvtextfm.cpp` | `measureText()`: ruby inline box advance = `lastFont->getSize()` per base char |
-| `lvfntman.cpp` | `DrawTextString()`: `setupHBFeatures(is_vertical)` enables `+vert`/`+vrt2` OpenType features |
-| `lvfntman.cpp` | `drawGlyphItemRotated90CW`: bearing-correct placement for rotated glyphs (ー、…、brackets) |
-| `lvlogical.h` | New file: CSS logical property index helpers for vertical-rl (Option C) |
-
-### cre.cpp (KOReader bridge)
-
-- `isVerticalText()` added to `lvdocview.h`
-- `getWordFromPosition`: skip margin adjustment for vertical text
-- `docToWindowRect`: normalize left/right for vertical-rl
-- `docToWindowPoint`: off-screen rejection for out-of-range screen_x
-- `resetRubyDiag()` / `getRubyDiagStats()`: ruby cell placement diagnostics
-
 ### Frontend (Lua)
 
 | Feature | Location |
@@ -149,116 +215,7 @@ bool LVDocView::isVerticalText() const {
 
 **Known limitation**: some EPUBs have stray U+0020 whitespace in
 their HTML between `</ruby>` and the next character. With `white-space: normal` this
-renders as a visible ~1-char gap. This appears in horizontal mode too — it is a property
-of the EPUB source, not a rendering bug.
-
-### Formal tests
-
-- `spec/unit/vertical_text_spec.lua` — 14 tests: word lookup, multi-column selection, ruby annotation sboxes
-- `spec/unit/vertical_option_c_spec.lua` — Option C: uniform column y_base
-- `spec/unit/ruby_annot_y_spec.lua` — ruby cell placement regression (resetRubyDiag API)
-- `spec/unit/bisect_ruby_crash_spec.lua` — no SIGSEGV on ruby EPUB
-- `spec/unit/vertical_column_bottom_spec.lua` — no phantom chars at column bottom
-
-## Issue History
-
-### Px — Content gap between pages — FIXED
-
-Seven interrelated bugs caused trailing columns to be invisible on real EPUBs:
-
-1. `drawPageTo` (lvdocview.cpp): Y=X swap mismatch — swap to `x0=clip.top, y0=0` for vertical.
-2. `drawPageTo` clip.bottom: use `pageRect->bottom - bottom_margin` for vertical.
-3. `drawPageTo` clip.left: set `clip.left = clip.right - page.height` to avoid duplicate columns.
-4. `isVerticalText` (lvdocview.cpp): scan all pages for height ≤ m_dx + 32 as fallback.
-5. `renderBlockElement` (lvrend.cpp): walk descendants (DFS ≤ 6 deep) to find vertical writing-mode.
-6. `addContentSpace` (lvrend.cpp): move `moveDown()` into horizontal-only branch to stop double-advance.
-7. `LVRendPageContext` (lvpagesplitter): add separate `vert_split_page_h` field for page splitter.
-
-### P7 — Page turn direction fixed left→right — FIXED
-
-Auto-set RTL page turn direction for vertical documents on open. Reversed left/right arrow
-key navigation to match right→left column flow.
-
-### P8 — Uneven column bottom alignment — FIXED
-
-Root cause: `hb_buffer_reverse_clusters()` was incorrectly called for TTB text in
-`lvfntman.cpp`. RTL needs reversal because HarfBuzz reverses output; TTB does not.
-The misapplied reversal broke the cluster→advance mapping: `m_advance[0..N-2] = 0`,
-only the last character carried the full N×font_size advance.
-
-Fix (`FORMATTING_VERSION_ID 0x003B → 0x003C`):
-- `lvfntman.cpp`: remove `hb_buffer_reverse_clusters()` from TTB branch
-- `lvtextfm_layout_v.cpp`: gate `char_count_adv` on `adv_available==false` only
-- `lvtextfm_layout_h.cpp`: remove `is_neg_width > 0x8000` workaround
-
-### P11 — Phantom characters at column bottom — FIXED
-
-Root cause: `processParagraphVertical()` used `maxH = page_height` (≈755px) but the
-actual drawable screen-Y range was `page_height - bvo` where bvo = accumulated X
-positions of ancestor blocks.
-
-Fix (`FORMATTING_VERSION_ID 0x003C → 0x003D`):
-1. `lvtinydom.cpp renderFinalBlock()`: compute BVO and set `page_h -= bvo`.
-2. `lvtextfm_layout_v.cpp processParagraphVertical()`: change `> maxH` to `>= maxH`
-   so zero-advance punctuation (。etc.) that lands at clip.bottom goes to the next column.
-
-### P1 — Ruby base character alignment — FIXED
-
-Ruby base characters now align with surrounding body text in vertical-rl. Annotations
-overhang into the inter-column gap per JLReq. Verified with sanshiro.epub.
-
-### P13 — Option C: CSS logical property rewrite — DONE (merged to master)
-
-Replaced hard-coded physical CSS property indices with `CSSLogical` logical mappings.
-This fixed the column staircase that appeared when `padding-left` (physical) was
-incorrectly applied as the inline-start direction offset.
-
-Before Option C: `padding-left` → `doc-X` → screen-Y offset → staircase between columns.
-After Option C: `padding-top` (physical) = inline-start → correct screen-Y; `padding-left`
-= block-start → correct screen-X.
-
-### P4 — Ruby sbox: effective writing-mode for ruby cells — FIXED
-
-`renderCells()` used `table_style->writing_mode` which stores the CSS *specified* value,
-not the cascaded value. For synthetic `<rubyBox>` nodes and inherited elements, this
-returned `css_wm_inherit` (0), causing `vert_ruby = false` and applying
-`fmt.setX(cell->col->x)` (wrong: displaces annotation in screen-Y direction for
-multi-group ruby where `col->x != 0`).
-
-Fix: walk up the parent chain to find the nearest ancestor with an explicit
-(non-inherit) writing-mode. `FORMATTING_VERSION_ID 0x0042 → 0x0043`.
-
-### P9 — Rotated glyph bearing correction — FIXED
-
-`drawGlyphItemRotated90CW` used an em-square centering approximation for the post-rotation
-placement. Replaced with bearing-correct formula:
-```
-correct_x = x + _baseline - origin_y
-correct_y = y + _size - origin_x - bmp_w
-```
-Eliminates 2–4px misalignment for ー、…、and brackets in fonts without `+vert` substitution.
-
-### P10 — char_count_adv undercount with ruby groups — FIXED
-
-`processParagraphVertical` computed `char_count_adv = (i - pos + 1) * avg_char_advance`
-treating each source position as 1 em. A ruby inline box at position j occupies
-N×avg_char_advance column depth but counted as 1×. Body chars after a 3-kanji ruby
-were underestimated by 2×em, allowing them to be formatted past `clip.bottom` and
-becoming invisible (same bug class as P11).
-
-Fix: accumulate `inline_box_extra` for each inline box encountered, add to `char_count_adv`.
-
-### P14 — Ruby base character overlap with preceding character — FIXED
-
-Ruby inline boxes were not subject to the `vert_min_next_x` guard that prevents
-plain characters from overlapping. The fix attempt in `d6b9d1bd` was algebraically
-incorrect: it shifted both `x0` and `doc_x_ib` by the clamping delta, but
-`DrawDocument` accumulates `draw_x_rb = x0 + doc_x_ib + node.getX()`, so the two
-shifts cancelled and the inline box landed at its original unclamped position.
-
-Fix: keep `doc_x_ib = 0 - node_x` (anchored to layout position) and add the
-clamping delta only to `x0`. This makes `draw_x_rb = y + node_x + delta` (delta ≥ 0),
-preventing the ruby base group from starting before the preceding character ends.
+renders as a visible ~1-char gap. This is a property of the EPUB source, not a rendering bug.
 
 ## Open Issues
 
