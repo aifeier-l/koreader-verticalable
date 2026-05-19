@@ -31,7 +31,7 @@ Requires: 三四郎.epub in the KOReader root directory.
 
 local lfs = require("libs/libkoreader-lfs")
 
-describe("Ruby annotation Y alignment", function()
+describe("Vertical text: ruby annotation Y alignment", function()
     local DocumentRegistry, ReaderUI, UIManager, Screen
     local epub_candidates = {
         "spec/front/unit/data/fixtures/vertical_text/sanshiro.epub",
