@@ -1806,18 +1806,10 @@ function ReaderHighlight:onHold(arg, ges)
         elseif is_vertical and self.ui.rolling and self.selected_text.sboxes and #self.selected_text.sboxes > 0 then
             -- Vertical-rl: native crengine selection draws scattered per-word boxes.
             -- Use Lua-side invert boxes (same as onHoldPan) for a cleaner appearance.
+            -- docToWindowPoint and drawPageTo now use the same clip.right anchor, so
+            -- sboxes from getWordFromPosition are already at the correct screen position.
             self.ui.document:clearSelection()
             local sboxes = self.selected_text.sboxes
-            local margins = self.ui.document:getPageMargins()
-            local dx = margins and margins.right or 0
-            if dx ~= 0 then
-                local shifted = {}
-                for _, sb in ipairs(sboxes) do
-                    table.insert(shifted, Geom:new{
-                        x = sb.x + dx, y = sb.y, w = sb.w, h = sb.h })
-                end
-                sboxes = shifted
-            end
             self.view.highlight.temp[self.hold_pos.page] = sboxes
             UIManager:setDirty(self.dialog, "ui", Geom.boundingBox(sboxes))
         else
@@ -2010,28 +2002,9 @@ function ReaderHighlight:onHoldPan(_, ges)
         -- Clear the native crengine word selection from onHold so it does not
         -- show through the Lua column boxes.
         self.ui.document:clearSelection()
-        -- docToWindowPoint computes sbox.x using page_right = clip.right - margin_right,
-        -- but drawPageTo draws columns starting from clip.right (without margin).
-        -- Shift sboxes by the margin values so they align with the drawn glyphs.
+        -- docToWindowPoint and drawPageTo now use the same clip.right anchor, so
+        -- sboxes are already at the correct screen position — no shift needed.
         local sboxes = self.selected_text.sboxes
-        if sboxes and #sboxes > 0 then
-            local margins = self.ui.document:getPageMargins()
-            -- Only X needs correction: docToWindowPoint uses page_right (clip.right -
-            -- margins.right) but drawPageTo draws from clip.right, so sbox.x is
-            -- margins.right px to the left of the actual glyph.
-            -- Y is already in absolute screen coordinates — no correction needed.
-            local dx = margins and margins.right or 0
-            local dy = 0
-            if dx ~= 0 then
-                local Geom = require("ui/geometry")
-                local shifted = {}
-                for _, sb in ipairs(sboxes) do
-                    table.insert(shifted, Geom:new{
-                        x = sb.x + dx, y = sb.y, w = sb.w, h = sb.h })
-                end
-                sboxes = shifted
-            end
-        end
         self.view.highlight.temp[self.hold_pos.page] = sboxes
     end
     UIManager:setDirty(self.dialog, "ui")
