@@ -88,6 +88,7 @@ describe("Vertical text: highlight box column alignment", function()
                 tap_x = try_x
                 tap_y = mid_y
                 raw_sbox = w.sbox  -- Geom {x, y, w, h} in screen coords
+                raw_word = w
                 break
             end
         end
@@ -121,21 +122,28 @@ describe("Vertical text: highlight box column alignment", function()
 
         local dsb = displayed_sboxes[1]
         local displayed_cx = dsb.x + math.floor(dsb.w / 2)
-        local shift = displayed_cx - raw_cx
+        local displayed_cy = dsb.y + math.floor(dsb.h / 2)
+        local raw_cy      = raw_sbox.y + math.floor(raw_sbox.h / 2)
+        local shift_x = displayed_cx - raw_cx
+        local shift_y = displayed_cy - raw_cy
+        local margins = doc:getPageMargins()
 
         print(string.format(
-            "[highlight_align] raw_cx=%d  displayed_cx=%d  shift=%d  margins.right=%d",
-            raw_cx, displayed_cx, shift,
-            doc:getPageMargins() and doc:getPageMargins().right or 0))
+            "[highlight_align] word='%s'  tap=(%d,%d)"
+            .. "  raw sbox x=%d y=%d w=%d h=%d"
+            .. "  displayed x=%d y=%d w=%d h=%d"
+            .. "  shift_x=%d shift_y=%d  margins.right=%d margins.top=%d",
+            raw_word.word, tap_x, tap_y,
+            raw_sbox.x, raw_sbox.y, raw_sbox.w, raw_sbox.h,
+            dsb.x, dsb.y, dsb.w, dsb.h,
+            shift_x, shift_y,
+            margins and margins.right or 0,
+            margins and margins.top or 0))
 
-        -- THE KEY ASSERTION: displayed highlight x-center must equal the raw sbox center.
-        -- If readerhighlight.lua is applying the stale `+ margins.right` correction,
-        -- displayed_cx = raw_cx + margins.right ≠ raw_cx and the test fails.
+        -- Check both X and Y: displayed highlight center must equal raw sbox center.
         assert.are.equal(raw_cx, displayed_cx,
-            string.format(
-                "Highlight shifted %+d px from glyph position (raw_cx=%d displayed_cx=%d). "
-                .. "readerhighlight.lua is adding margins.right to sbox.x. "
-                .. "Fix: remove the `sbox.x + dx` corrections from onHold and onHoldPan.",
-                shift, raw_cx, displayed_cx))
+            string.format("X shift %+d px (raw_cx=%d displayed_cx=%d)", shift_x, raw_cx, displayed_cx))
+        assert.are.equal(raw_cy, displayed_cy,
+            string.format("Y shift %+d px (raw_cy=%d displayed_cy=%d)", shift_y, raw_cy, displayed_cy))
     end)
 end)
