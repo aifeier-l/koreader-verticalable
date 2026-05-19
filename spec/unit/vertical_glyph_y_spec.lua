@@ -1,24 +1,19 @@
 --[[--
-Vertical-rl glyph Y position regression test.
+Vertical-rl glyph Y formula regression test.
 
-In vertical-rl DrawTextString(), the glyph screen-Y was computed as:
+The correct vertical glyph-Y formula is:
     gy = y + _baseline - origin_y - y_offset
 
-where y = slot top (advance start), _baseline = horizontal font baseline
-distance, and origin_y = horizontal glyph bearing-Y.  The term
-(_baseline − origin_y) shifts every glyph DOWN from its slot top by
-~1/5 em, causing the rendered glyph to appear below the highlight sbox.
+The (_baseline − origin_y) term is a per-font constant (≈ |descender|, 4-10 px)
+that is approximately uniform for full-width CJK characters.  Its presence
+ensures visually consistent inter-character spacing.
 
-FIX: for vertical draws, skip the horizontal baseline adjustment:
-    gy = y - y_offset
+If someone removes the term (e.g. using gy = y − y_offset or gy = y), the
+average (gy − y) drops to ≈ 0, which this test detects.
 
-DETECTION: lfnt_vert_gy_offset_sum accumulates (gy − y) for all
-non-rotated vertical glyph draws.  With the broken formula, each CJK
-glyph contributes (_baseline − origin_y) > 0, so the sum is large
-positive.  With the fix, each contributes −y_offset ≈ 0, so sum ≈ 0.
-
-The test asserts that the average per-glyph offset is within ±2 px,
-which passes after the fix and fails with the old code (~5-6 px average).
+DETECTION: lfnt_vert_gy_diag records (gy − y) per draw.
+  Correct formula: avg ≈ |descender| ≈ 4-10 px → PASSES.
+  Missing baseline term: avg ≈ 0 px → FAILS.
 
 Run via:
   ./kodev test front -f "Vertical text"
@@ -26,7 +21,7 @@ Run via:
 
 local lfs = require("libs/libkoreader-lfs")
 
-describe("Vertical text: glyph Y position (no horizontal baseline shift)", function()
+describe("Vertical text: glyph Y formula correctness", function()
     local epub_path
     for _, p in ipairs({
         "spec/front/unit/data/fixtures/vertical_text/sanshiro.epub",
@@ -63,14 +58,13 @@ describe("Vertical text: glyph Y position (no horizontal baseline shift)", funct
         UIManager:quit()
     end)
 
-    it("rendered glyph Y equals slot top (no ~1/5 em horizontal baseline shift) #glyph_y", function()
+    it("avg glyph Y offset includes baseline term (not zero) #glyph_y", function()
         if not epub_path then pending("sanshiro.epub not found"); return end
         if not (doc.isVerticalText and doc:isVerticalText()) then
             pending("document is not vertical-rl")
             return
         end
 
-        -- Reset diagnostic, then render several pages to accumulate draws.
         doc._document:resetVertGlyphYDiag()
 
         local pages_to_visit = math.min(doc:getPageCount(), 10)
@@ -87,7 +81,8 @@ describe("Vertical text: glyph Y position (no horizontal baseline shift)", funct
             end
         end
 
-        local count, sum = doc._document:getVertGlyphYDiag()
+        -- Returns: count, sum, sum_sq, min, max
+        local count, sum, _, mn, mx = doc._document:getVertGlyphYDiag()
 
         if count == 0 then
             pending("no vertical glyph draws recorded")
@@ -97,22 +92,20 @@ describe("Vertical text: glyph Y position (no horizontal baseline shift)", funct
         local avg = sum / count
 
         print(string.format(
-            "[glyph_y] pages=%d  glyph_draws=%d  total_gy_offset=%d  avg=%.2f px",
-            pages_to_visit, count, sum, avg))
+            "[glyph_y] pages=%d  draws=%d  avg=%.2f  min=%d  max=%d",
+            pages_to_visit, count, avg, mn, mx))
 
-        -- THE KEY ASSERTION: average (gy − y) per glyph must be within ±2 px.
-        -- With the broken formula (gy = y + _baseline − origin_y − y_offset):
-        --   avg ≈ (_baseline − origin_y) ≈ 5-6 px (~1/5 em) → test FAILS.
-        -- With the fix (gy = y − y_offset):
-        --   avg ≈ −y_offset ≈ 0 px → test PASSES.
-        local TOLERANCE = 2  -- px; much smaller than the ~5-6 px broken shift
-        assert.is_true(math.abs(avg) <= TOLERANCE,
+        -- THE KEY ASSERTION: avg(gy − y) must be positive (the baseline term exists).
+        -- With gy = y + _baseline − origin_y − y_offset: avg ≈ 4-10 px (|descender|).
+        -- With gy = y or gy = y − y_offset: avg ≈ 0 → FAILS.
+        local MIN_AVG = 2  -- px; well below the expected ~4-10 px
+        assert.is_true(avg >= MIN_AVG,
             string.format(
-                "Average vertical glyph Y offset = %.2f px (tolerance ±%d px). "
-                .. "The horizontal _baseline − origin_y correction is being applied "
-                .. "in vertical mode, shifting every glyph ~1/5 em below its slot top. "
-                .. "Fix: use gy = y − y_offset (no horizontal baseline term) "
-                .. "in DrawTextString for vertical draws.",
-                avg, TOLERANCE))
+                "Average glyph Y offset %.2f px < %d px. "
+                .. "The (_baseline − origin_y) term appears missing from gy. "
+                .. "Using gy = y or gy = y − y_offset causes irregular spacing "
+                .. "because y_offset varies per character. "
+                .. "Correct formula: gy = y + _baseline − origin_y − y_offset.",
+                avg, MIN_AVG))
     end)
 end)
