@@ -1,9 +1,9 @@
 --[[--
-Option C: verify uniform column y_base.
+Vertical text: verify columns start at the screen top (no staircase).
 
-With Option C (CSSLogical), CSS padding-left on containers maps to
-block-direction (screen-X), not inline-direction (screen-Y).  All body
-paragraphs get y_base = clip.top regardless of HTML nesting depth.
+With CSSLogical, CSS padding-left on containers maps to block-direction
+(screen-X), not inline-direction (screen-Y).  All body paragraphs get
+y_base = clip.top regardless of HTML nesting depth.
 
 Test: find words very close to the screen top (y ≤ clip.top + 1 char).
 Such words should exist in EVERY column (columns fill from screen top).
@@ -11,7 +11,7 @@ If some columns have no words near the top, those columns start lower —
 which indicates a staircase / y_base mismatch.
 --]]
 
-describe("Option C: uniform column y_base", function()
+describe("Vertical text: column top alignment (no staircase)", function()
     local epub_path
     for _, p in ipairs({
         "spec/front/unit/data/fixtures/vertical_text/sanshiro.epub",
@@ -54,7 +54,7 @@ describe("Option C: uniform column y_base", function()
         UIManager:quit()
     end)
 
-    it("columns contain words near screen top (no staircase) #option_c", function()
+    it("columns contain words near screen top (no staircase) #column_top", function()
         if not epub_path then pending("no epub"); return end
 
         local doc = readerui.document
@@ -86,7 +86,7 @@ describe("Option C: uniform column y_base", function()
             if total_cols_checked >= 20 then break end
         end
 
-        print(string.format("[option_c] cols_checked=%d  cols_with_word_near_top=%d  ratio=%.0f%%",
+        print(string.format("[column_top] cols_checked=%d  cols_with_word_near_top=%d  ratio=%.0f%%",
             total_cols_checked, found_near_top, found_near_top/total_cols_checked*100))
 
         -- Most columns (>60%) should have words near the screen top.
