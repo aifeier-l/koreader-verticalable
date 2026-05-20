@@ -166,13 +166,38 @@ For a ruby group with `node_y = N` (= accumulated column advance in block):
 The base text column is `annot_width` to the left of `clip.right − N` (the annotation zone),
 which places it correctly: annotation occupies the inter-column space to the right of the base.
 
-#### Ruby column position (was P15 — fixed)
+#### Ruby column position
 
-`y0` and `doc_y_ib` were not initialised in the vertical inline-box draw
-branch of `LFormattedText::Draw()`.  In practice `y0 ≈ 0`, which forced
-every ruby group to draw at `clip.right − annot_width` regardless of its
-accumulated column advance `node_y`.  Fix: `y0 = x + node_y` and
-`doc_y_ib = 0 − node_y`.  Regression test: `vertical_ruby_column_spec.lua`.
+`y0 = x + node_y` and `doc_y_ib = 0 − node_y` ensure each ruby group draws
+at the correct accumulated column advance `node_y`, not always at `clip.right − annot_width`.
+Regression test: `vertical_ruby_column_spec.lua`.
+
+#### Latin base text column depth
+
+`fmt.getWidth()` after `renderBlockElement` is TTB-based (≈ `char_count × font_size`)
+for Latin words rendered as a rotated block. The actual visual column depth is the
+horizontal advance of the word. Fix (lvtextfm.cpp `measureText`):
+
+```cpp
+// Collect horizontal advance via getCharWidth() during ruby cell scan
+base_horiz_advance_pre += base_font->getCharWidth(c);  // per base char
+// Override advance with measured value (annotation depth if longer)
+advance = max(base_horiz_advance_pre, annot_depth);
+```
+
+`o.width` and `letter_spacing` both use this value, so frmline layout and
+`vert_min_next_x` tracking in Draw() are both corrected.
+
+Also: `vert_layout_min_x` (post-layout pass) applied `eff_w = max(word->width, font_size)`
+to all words including spaces. For a U+0020 before an inline box this inflated
+`ib_word_x` by `font_size − space_advance`, creating a gap above the box. Fix
+(lvtextfm_layout_h.cpp `alignLineHorizontal`): apply the font_size minimum only
+for CJK words (where compressed punctuation needs it).
+
+```cpp
+bool is_cjk = (wi->flags & (LTEXT_WORD_IS_CJK | LTEXT_WORD_IS_FLEXIBLE_WIDTH_CJK)) != 0;
+int eff_w = (is_cjk && (int)wi->width < font_sz) ? font_sz : (int)wi->width;
+```
 
 ### Coordinate conversion (lvdocview.cpp, cre.cpp)
 
@@ -213,9 +238,7 @@ bool LVDocView::isVerticalText() const {
 | Strikeout highlight: vertical line through column center | `readerview.lua` |
 | Vertical footer: progress bar fills right→left, TOC ticks mirrored | `readerfooter.lua` |
 
-**Known limitation**: some EPUBs have stray U+0020 whitespace in
-their HTML between `</ruby>` and the next character. With `white-space: normal` this
-renders as a visible ~1-char gap. This is a property of the EPUB source, not a rendering bug.
+**Note on whitespace**: some EPUBs have U+0020 spaces adjacent to ruby groups (e.g. `と Nachbild《…》 という`). These render as narrow gaps proportional to the space glyph's advance width (≈ ¼ em). This is expected — the space is in the EPUB source.
 
 ## Open Issues
 
