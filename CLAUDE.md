@@ -222,18 +222,14 @@ bool LVDocView::isVerticalText() const {
 | Underline highlight: vertical line on right edge of column | `readerview.lua` |
 | Strikeout highlight: vertical line through column center | `readerview.lua` |
 | Vertical footer: progress bar fills right→left, TOC ticks mirrored | `readerfooter.lua` |
+| Glyph rotation: ー 〜 … 、。括弧類 etc. use vertical forms (`vert`/`vrt2`) | `lvfntman.cpp` |
+| Column bottom clipping fix: glyphs at column end no longer clipped | `lvtextfm_layout_h.cpp` |
+| sbox screen_y offset (P5): `windowToDocPoint`/`docToWindowPoint` account for `clip.top` | `lvdocview.cpp` |
+| Character overlap fix (上にめり込む): `vert_min_next_x` correctly prevents overlap | `lvtextfm_layout_h.cpp` |
 
 **Note on whitespace**: some EPUBs have U+0020 spaces adjacent to ruby groups (e.g. `と Nachbild《…》 という`). These render as narrow gaps proportional to the space glyph's advance width (≈ ¼ em). This is expected — the space is in the EPUB source.
 
 ## Open Issues
-
-### P5 — docToWindowPoint screen_y offset (~9px)
-
-`sbox.y` returned by `getWordFromPosition` is off by approximately `clip.top` pixels
-(≈ page top margin + header height ≈ 9px) in vertical-rl mode. In `drawPageTo`, the
-formatter receives `x0 = clip.top` as the screen-Y origin, but `windowToDocPoint` and
-`docToWindowPoint` do not account for this offset when converting between screen-Y and
-doc_x. The fix is to subtract/add `clip.top` in the vertical branch of these two functions.
 
 ### P6 — Per-element writing mode, floats (low priority)
 
