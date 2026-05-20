@@ -11,9 +11,11 @@ stack, which makes every ruby group draw at column clip.right − annot_width
 regardless of its accumulated column advance (node_y).  Ruby groups in later
 columns appear shifted several columns to the right.
 
-DETECTION: ltext_vert_ruby_y0_total_error accumulates |y0_actual − y0_expected|
-for every ruby inline-box DrawDocument call.  With y0 = 0 the error equals
-node_y per draw and is > 0 for any ruby not at the very first column.
+DETECTION: ltext_vert_bleed_count fires when a ruby inline-box's screen-Y
+start (draw_x_inner) is less than the preceding character's screen-Y end
+(preceding_end), meaning the ruby group overlaps the preceding character.
+With the bug (y0 = 0) most ruby groups in columns > 0 would bleed into the
+character above them.
 
 FIX: set y0 = x + node_y and doc_y_ib = 0 − node_y in the vertical branch.
 
@@ -60,12 +62,13 @@ describe("Vertical text: ruby inline-box column position", function()
         UIManager:quit()
     end)
 
-    it("ruby y0 column offset equals x + node_y for every inline-box draw #ruby_column", function()
+    it("ruby groups do not bleed into preceding characters #ruby_column", function()
         if not epub_path then pending("sanshiro.epub not found"); return end
 
-        -- Reset the y0 diagnostic, then render several pages.
-        -- Each page visit calls Draw() which accumulates |y0_actual - y0_expected|.
-        doc._document:resetVertRubyY0Diag()
+        -- Reset the bleed diagnostic, then render several pages.
+        -- Each page visit calls Draw() which fires ltext_vert_bleed_count when a
+        -- ruby inline-box's draw_x_inner < preceding character's slot end.
+        doc._document:resetVertBleedCounters()
 
         local pages_to_visit = math.min(doc:getPageCount(), 20)
         local sw, sh = Screen:getWidth(), Screen:getHeight()
@@ -82,23 +85,20 @@ describe("Vertical text: ruby inline-box column position", function()
             end
         end
 
-        local count, total_error = doc._document:getVertRubyY0Diag()
+        local bleed_count, bleed_max_px = doc._document:getVertBleedStats()
 
         print(string.format(
-            "[ruby_column] pages=%d  ruby_ib_draws=%d  total_y0_error=%d px",
-            pages_to_visit, count, total_error))
+            "[ruby_column] pages=%d  ruby_bleed_count=%d  max_px=%d",
+            pages_to_visit, bleed_count, bleed_max_px))
 
-        assert.is_true(count > 0,
-            "No ruby inline-box draws recorded — is sanshiro.epub loaded correctly?")
-
-        -- THE KEY ASSERTION: every ruby DrawDocument call must have y0 = x + node_y.
-        -- With the bug (y0 = 0) the error equals node_y per draw, which grows with
-        -- each column and reaches hundreds of px for mid-page ruby groups.
-        assert.are.equal(0, total_error,
+        -- THE KEY ASSERTION: no ruby group may start before the preceding character ends.
+        -- With the column-position bug (y0 = 0) ruby groups in later columns have
+        -- draw_x_inner far below the correct position, bleeding into preceding chars.
+        assert.are.equal(0, bleed_count,
             string.format(
-                "%d ruby IB draw(s) had total y0 column error %d px. "
+                "%d ruby IB draw(s) bled into preceding character (max %d px). "
                 .. "Fix: set y0 = x + node_y and doc_y_ib = 0 - node_y in the "
                 .. "vertical inline-box branch of LFormattedText::Draw().",
-                count, total_error))
+                bleed_count, bleed_max_px))
     end)
 end)
