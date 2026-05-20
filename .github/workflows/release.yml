@@ -74,6 +74,31 @@ jobs:
           name: kindlehf
           path: koreader-kindlehf-latest-stable.zip
 
+  kindlepw2:
+    name: Kindle (PW2/non-HF)
+    runs-on: ubuntu-latest
+    container:
+      image: koreader/kokindle:latest
+    env:
+      BASH_ENV: /home/ko/.bashrc
+      TARGET: kindlepw2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch submodules
+        run: make fetchthirdparty
+      - name: Build
+        run: make TARGET=kindlepw2
+      - name: Package
+        run: make TARGET=kindlepw2 update
+      - name: Rename for release
+        run: cp koreader-kindlepw2-*.zip koreader-kindlepw2-latest-stable.zip || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kindlepw2
+          path: koreader-kindlepw2-latest-stable.zip
+
   kobo:
     name: Kobo
     runs-on: ubuntu-latest
@@ -150,7 +175,7 @@ jobs:
           path: koreader-cervantes-latest-stable.zip
 
   remarkable:
-    name: reMarkable
+    name: reMarkable (armhf)
     runs-on: ubuntu-latest
     container:
       image: koreader/koremarkable:latest
@@ -173,6 +198,31 @@ jobs:
         with:
           name: remarkable
           path: koreader-remarkable-latest-stable.zip
+
+  remarkable-aarch64:
+    name: reMarkable (aarch64)
+    runs-on: ubuntu-latest
+    container:
+      image: koreader/koremarkable:latest
+    env:
+      BASH_ENV: /home/ko/.bashrc
+      TARGET: remarkable-aarch64
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch submodules
+        run: make fetchthirdparty
+      - name: Build
+        run: make TARGET=remarkable-aarch64
+      - name: Package
+        run: make TARGET=remarkable-aarch64 update
+      - name: Rename for release
+        run: cp koreader-remarkable-aarch64-*.zip koreader-remarkable-aarch64-latest-stable.zip || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: remarkable-aarch64
+          path: koreader-remarkable-aarch64-latest-stable.zip
 
   android-arm:
     name: Android (ARM)
@@ -249,7 +299,7 @@ jobs:
 
   release:
     name: Create Release
-    needs: [kindle, kindlehf, kobo, pocketbook, cervantes, remarkable, android-arm, android-arm64]
+    needs: [kindle, kindlehf, kindlepw2, kobo, pocketbook, cervantes, remarkable, remarkable-aarch64, android-arm, android-arm64]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -268,12 +318,20 @@ jobs:
         with:
           path: artifacts/
 
+      - name: Create OTA aliases
+        run: |
+          # kobov5: same binary as kobo (FW 5.x uses different ota_model string)
+          cp artifacts/kobo/koreader-kobo-latest-stable.zip \
+             artifacts/kobo/koreader-kobov5-latest-stable.zip
+          # kindle-legacy: same binary as kindle (non-touch Kindles)
+          cp artifacts/kindle/koreader-kindle-latest-stable.zip \
+             artifacts/kindle/koreader-kindle-legacy-latest-stable.zip
+
       - name: Generate zsync files
         run: |
           sudo apt-get update -qq && sudo apt-get install -y zsync
           for f in artifacts/**/*-latest-stable.zip; do
             name=$(basename "$f")
-            base="${name%-latest-stable.zip}"
             zsyncmake -u "$OTA_BASE_URL/$name" \
               -o "${f%.zip}.zsync" \
               "$f"
@@ -312,12 +370,14 @@ jobs:
 
             | Platform | File |
             |----------|------|
-            | Kindle (legacy) | `koreader-kindle-${{ env.RELEASE_TAG }}.zip` |
-            | Kindle (HF) | `koreader-kindlehf-${{ env.RELEASE_TAG }}.zip` |
+            | Kindle (HF / PW5以降) | `koreader-kindlehf-${{ env.RELEASE_TAG }}.zip` |
+            | Kindle (PW2〜PW4, non-HF) | `koreader-kindlepw2-${{ env.RELEASE_TAG }}.zip` |
+            | Kindle (legacy, non-touch) | `koreader-kindle-${{ env.RELEASE_TAG }}.zip` |
             | Kobo | `koreader-kobo-${{ env.RELEASE_TAG }}.zip` |
             | PocketBook | `koreader-pocketbook-${{ env.RELEASE_TAG }}.zip` |
             | Cervantes | `koreader-cervantes-${{ env.RELEASE_TAG }}.zip` |
-            | reMarkable | `koreader-remarkable-${{ env.RELEASE_TAG }}.zip` |
+            | reMarkable 1 (armhf) | `koreader-remarkable-${{ env.RELEASE_TAG }}.zip` |
+            | reMarkable 2/Paper Pro (aarch64) | `koreader-remarkable-aarch64-${{ env.RELEASE_TAG }}.zip` |
             | Android (ARM64, most phones) | `koreader-android-arm64-${{ env.RELEASE_TAG }}.apk` |
             | Android (ARM 32-bit) | `koreader-android-${{ env.RELEASE_TAG }}.apk` |
 
