@@ -318,39 +318,43 @@ jobs:
         with:
           path: artifacts/
 
-      - name: Create OTA aliases
+      - name: Create OTA aliases and versioned copies
         run: |
+          TAG=$RELEASE_TAG
           # kobov5: same binary as kobo (FW 5.x uses different ota_model string)
           cp artifacts/kobo/koreader-kobo-latest-stable.zip \
              artifacts/kobo/koreader-kobov5-latest-stable.zip
           # kindle-legacy: same binary as kindle (non-touch Kindles)
           cp artifacts/kindle/koreader-kindle-latest-stable.zip \
              artifacts/kindle/koreader-kindle-legacy-latest-stable.zip
+          # Versioned copies of all zips (used as zsyncmake input and for manual download)
+          for f in artifacts/**/*-latest-stable.zip; do
+            cp "$f" "${f/latest-stable/$TAG}"
+          done
+          # Versioned copies of APKs
+          for f in artifacts/**/*-latest-stable.apk; do
+            cp "$f" "${f/latest-stable/$TAG}" 2>/dev/null || true
+          done
 
       - name: Generate zsync files
         run: |
+          # zsyncmake input = versioned zip  → Filename header = versioned name
+          # OTA manager reads Filename to extract version (v2026.05 pattern)
+          # zsync2 downloads: getOTAServer() + Filename = releases/.../koreader-X-v2026.05.zip
           sudo apt-get update -qq && sudo apt-get install -y zsync
-          for f in artifacts/**/*-latest-stable.zip; do
+          TAG=$RELEASE_TAG
+          shopt -s globstar
+          for f in artifacts/**/*-"$TAG".zip; do
             name=$(basename "$f")
-            zsyncmake -u "$OTA_BASE_URL/$name" \
-              -o "${f%.zip}.zsync" \
+            stable_name="${name/$TAG/latest-stable}"
+            dir=$(dirname "$f")
+            zsyncmake -u "$OTA_BASE_URL/$stable_name" \
+              -o "$dir/${stable_name%.zip}.zsync" \
               "$f"
           done
-
-      - name: Create versioned copies for manual download
-        run: |
-          TAG=$RELEASE_TAG
-          for f in artifacts/**/*-latest-stable.zip; do
-            versioned="${f/latest-stable/$TAG}"
-            cp "$f" "$versioned"
-          done
+          # Versioned zsync copies
           for f in artifacts/**/*-latest-stable.zsync; do
-            versioned="${f/latest-stable/$TAG}"
-            cp "$f" "$versioned"
-          done
-          for f in artifacts/**/*-latest-stable.apk; do
-            versioned="${f/latest-stable/$TAG}"
-            cp "$f" "$versioned" 2>/dev/null || true
+            cp "$f" "${f/latest-stable/$TAG}"
           done
 
       - name: List artifacts
