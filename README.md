@@ -105,7 +105,6 @@ Please follow the model specific steps for your device:
 [Cervantes](https://github.com/koreader/koreader/wiki/Installation-on-BQ-devices) •
 [Kindle](https://github.com/koreader/koreader/wiki/Installation-on-Kindle-devices) •
 [Kobo](https://github.com/koreader/koreader/wiki/Installation-on-Kobo-devices) •
-[Linux](https://github.com/koreader/koreader/wiki/Installation-on-desktop-linux) •
 [Pocketbook](https://github.com/koreader/koreader/wiki/Installation-on-PocketBook-devices) •
 [reMarkable](https://github.com/koreader/koreader/wiki/Installation-on-Remarkable)
 
