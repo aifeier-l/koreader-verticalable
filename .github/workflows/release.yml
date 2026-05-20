@@ -335,6 +335,13 @@ jobs:
           for f in artifacts/**/*-latest-stable.apk; do
             cp "$f" "${f/latest-stable/$TAG}" 2>/dev/null || true
           done
+          # Android "link" type OTA index files (no extension, first line = APK filename)
+          # otamanager downloads koreader-android[-arm64]-latest-stable (no ext),
+          # reads line 1 as the APK filename, then downloads that APK directly.
+          echo "koreader-android-arm64-$TAG.apk" \
+            > artifacts/android-arm64/koreader-android-arm64-latest-stable
+          echo "koreader-android-$TAG.apk" \
+            > artifacts/android-arm/koreader-android-latest-stable
 
       - name: Generate zsync files
         run: |
