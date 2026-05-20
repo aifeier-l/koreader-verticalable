@@ -45,9 +45,6 @@ body { writing-mode: vertical-rl !important; }
   entirely in one writing mode. EPUBs that mix horizontal and vertical sections within
   the same file may not display correctly.
 
-- **Highlight position is slightly off.** The highlight overlay drawn when you select text
-  may be shifted by a few pixels from the actual characters. Reading is not affected.
-
 - **EPUBs with stray whitespace between ruby groups** may show a small gap between ruby
   groups and the following character. This is a property of the EPUB source, not a
   rendering bug.
