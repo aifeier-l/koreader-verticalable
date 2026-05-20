@@ -12,12 +12,14 @@ It is regularly synced with upstream KOReader.
 
 | Platform | File |
 |----------|------|
-| Kindle (legacy) | `koreader-kindle-latest-stable.zip` |
-| Kindle (HF) | `koreader-kindlehf-latest-stable.zip` |
-| Kobo | `koreader-kobo-latest-stable.zip` |
-| PocketBook | `koreader-pocketbook-latest-stable.zip` |
-| Android (ARM64, most modern phones) | `koreader-android-arm64-latest-stable.apk` |
-| Android (ARM 32-bit) | `koreader-android-latest-stable.apk` |
+| Kindle (legacy) | `koreader-kindle-vYYYY.MM.zip` |
+| Kindle (HF) | `koreader-kindlehf-vYYYY.MM.zip` |
+| Kobo | `koreader-kobo-vYYYY.MM.zip` |
+| PocketBook | `koreader-pocketbook-vYYYY.MM.zip` |
+| Cervantes | `koreader-cervantes-vYYYY.MM.zip` |
+| reMarkable | `koreader-remarkable-vYYYY.MM.zip` |
+| Android (ARM64, most modern phones) | `koreader-android-arm64-vYYYY.MM.apk` |
+| Android (ARM 32-bit) | `koreader-android-vYYYY.MM.apk` |
 
 [Latest release](https://github.com/m-tky/koreader-tategumi/releases/latest)
 

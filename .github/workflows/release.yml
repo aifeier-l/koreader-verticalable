@@ -20,6 +20,7 @@ defaults:
 
 env:
   MAKEFLAGS: "PARALLEL_JOBS=3 OUTPUT_DIR=build"
+  OTA_BASE_URL: "https://github.com/m-tky/koreader-tategumi/releases/latest/download"
 
 jobs:
 
@@ -41,13 +42,13 @@ jobs:
         run: make TARGET=kindle
       - name: Package
         run: make TARGET=kindle update
-      - name: Rename for release
+      - name: Rename and generate zsync
         run: |
           cp koreader-kindle-*.zip koreader-kindle-latest-stable.zip || true
-      - name: Generate zsync
-        run: |
           apt-get install -y zsync
-          zsyncmake -o koreader-kindle-latest-stable.zsync koreader-kindle-latest-stable.zip
+          zsyncmake -u "$OTA_BASE_URL/koreader-kindle-latest-stable.zip" \
+            -o koreader-kindle-latest-stable.zsync \
+            koreader-kindle-latest-stable.zip
       - uses: actions/upload-artifact@v4
         with:
           name: kindle
@@ -73,12 +74,13 @@ jobs:
         run: make TARGET=kindlehf
       - name: Package
         run: make TARGET=kindlehf update
-      - name: Rename for release
-        run: cp koreader-kindlehf-*.zip koreader-kindlehf-latest-stable.zip || true
-      - name: Generate zsync
+      - name: Rename and generate zsync
         run: |
+          cp koreader-kindlehf-*.zip koreader-kindlehf-latest-stable.zip || true
           apt-get install -y zsync
-          zsyncmake -o koreader-kindlehf-latest-stable.zsync koreader-kindlehf-latest-stable.zip
+          zsyncmake -u "$OTA_BASE_URL/koreader-kindlehf-latest-stable.zip" \
+            -o koreader-kindlehf-latest-stable.zsync \
+            koreader-kindlehf-latest-stable.zip
       - uses: actions/upload-artifact@v4
         with:
           name: kindlehf
@@ -104,12 +106,13 @@ jobs:
         run: make TARGET=kobo
       - name: Package
         run: make TARGET=kobo update
-      - name: Rename for release
-        run: cp koreader-kobo-*.zip koreader-kobo-latest-stable.zip || true
-      - name: Generate zsync
+      - name: Rename and generate zsync
         run: |
+          cp koreader-kobo-*.zip koreader-kobo-latest-stable.zip || true
           apt-get install -y zsync
-          zsyncmake -o koreader-kobo-latest-stable.zsync koreader-kobo-latest-stable.zip
+          zsyncmake -u "$OTA_BASE_URL/koreader-kobo-latest-stable.zip" \
+            -o koreader-kobo-latest-stable.zsync \
+            koreader-kobo-latest-stable.zip
       - uses: actions/upload-artifact@v4
         with:
           name: kobo
@@ -135,18 +138,83 @@ jobs:
         run: make TARGET=pocketbook
       - name: Package
         run: make TARGET=pocketbook update
-      - name: Rename for release
-        run: cp koreader-pocketbook-*.zip koreader-pocketbook-latest-stable.zip || true
-      - name: Generate zsync
+      - name: Rename and generate zsync
         run: |
+          cp koreader-pocketbook-*.zip koreader-pocketbook-latest-stable.zip || true
           apt-get install -y zsync
-          zsyncmake -o koreader-pocketbook-latest-stable.zsync koreader-pocketbook-latest-stable.zip
+          zsyncmake -u "$OTA_BASE_URL/koreader-pocketbook-latest-stable.zip" \
+            -o koreader-pocketbook-latest-stable.zsync \
+            koreader-pocketbook-latest-stable.zip
       - uses: actions/upload-artifact@v4
         with:
           name: pocketbook
           path: |
             koreader-pocketbook-latest-stable.zip
             koreader-pocketbook-latest-stable.zsync
+
+  cervantes:
+    name: Cervantes
+    runs-on: ubuntu-latest
+    container:
+      image: koreader/kocervantes:latest
+    env:
+      BASH_ENV: /home/ko/.bashrc
+      TARGET: cervantes
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch submodules
+        run: make fetchthirdparty
+      - name: Build
+        run: make TARGET=cervantes
+      - name: Package
+        run: make TARGET=cervantes update
+      - name: Rename and generate zsync
+        run: |
+          cp koreader-cervantes-*.zip koreader-cervantes-latest-stable.zip || true
+          apt-get install -y zsync
+          zsyncmake -u "$OTA_BASE_URL/koreader-cervantes-latest-stable.zip" \
+            -o koreader-cervantes-latest-stable.zsync \
+            koreader-cervantes-latest-stable.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cervantes
+          path: |
+            koreader-cervantes-latest-stable.zip
+            koreader-cervantes-latest-stable.zsync
+
+  remarkable:
+    name: reMarkable
+    runs-on: ubuntu-latest
+    container:
+      image: koreader/koremarkable:latest
+    env:
+      BASH_ENV: /home/ko/.bashrc
+      TARGET: remarkable
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch submodules
+        run: make fetchthirdparty
+      - name: Build
+        run: make TARGET=remarkable
+      - name: Package
+        run: make TARGET=remarkable update
+      - name: Rename and generate zsync
+        run: |
+          cp koreader-remarkable-*.zip koreader-remarkable-latest-stable.zip || true
+          apt-get install -y zsync
+          zsyncmake -u "$OTA_BASE_URL/koreader-remarkable-latest-stable.zip" \
+            -o koreader-remarkable-latest-stable.zsync \
+            koreader-remarkable-latest-stable.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: remarkable
+          path: |
+            koreader-remarkable-latest-stable.zip
+            koreader-remarkable-latest-stable.zsync
 
   android-arm:
     name: Android (ARM)
@@ -223,7 +291,7 @@ jobs:
 
   release:
     name: Create Release
-    needs: [kindle, kindlehf, kobo, pocketbook, android-arm, android-arm64]
+    needs: [kindle, kindlehf, kobo, pocketbook, cervantes, remarkable, android-arm, android-arm64]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -242,6 +310,18 @@ jobs:
         with:
           path: artifacts/
 
+      - name: Create versioned copies for manual download
+        run: |
+          TAG=$RELEASE_TAG
+          for f in artifacts/**/*-latest-stable.zip; do
+            versioned="${f/latest-stable/$TAG}"
+            cp "$f" "$versioned"
+          done
+          for f in artifacts/**/*-latest-stable.apk; do
+            versioned="${f/latest-stable/$TAG}"
+            cp "$f" "$versioned" 2>/dev/null || true
+          done
+
       - name: List artifacts
         run: find artifacts/ -type f | sort
 
@@ -256,14 +336,19 @@ jobs:
             KOReader fork with Japanese vertical text (縦書き/tategumi) rendering support.
 
             ### Downloads
+
             | Platform | File |
             |----------|------|
-            | Kindle (legacy) | `koreader-kindle-latest-stable.zip` |
-            | Kindle (HF) | `koreader-kindlehf-latest-stable.zip` |
-            | Kobo | `koreader-kobo-latest-stable.zip` |
-            | PocketBook | `koreader-pocketbook-latest-stable.zip` |
-            | Android (ARM64, most phones) | `koreader-android-arm64-latest-stable.apk` |
-            | Android (ARM 32-bit) | `koreader-android-latest-stable.apk` |
+            | Kindle (legacy) | `koreader-kindle-${{ env.RELEASE_TAG }}.zip` |
+            | Kindle (HF) | `koreader-kindlehf-${{ env.RELEASE_TAG }}.zip` |
+            | Kobo | `koreader-kobo-${{ env.RELEASE_TAG }}.zip` |
+            | PocketBook | `koreader-pocketbook-${{ env.RELEASE_TAG }}.zip` |
+            | Cervantes | `koreader-cervantes-${{ env.RELEASE_TAG }}.zip` |
+            | reMarkable | `koreader-remarkable-${{ env.RELEASE_TAG }}.zip` |
+            | Android (ARM64, most phones) | `koreader-android-arm64-${{ env.RELEASE_TAG }}.apk` |
+            | Android (ARM 32-bit) | `koreader-android-${{ env.RELEASE_TAG }}.apk` |
+
+            `*-latest-stable.*` files are also provided for OTA update support.
 
             ### Install
             See [KOReader installation guide](https://github.com/koreader/koreader/wiki/Installation).
