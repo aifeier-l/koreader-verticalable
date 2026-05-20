@@ -6,6 +6,8 @@ This is a personal fork of [KOReader](https://github.com/koreader/koreader) that
 `writing-mode: vertical-rl` rendering for Japanese novels in EPUB format.
 It is regularly synced with upstream KOReader.
 
+![Vertical text rendering of 三四郎 (Natsume Soseki)](doc/screenshots/tategumi.png)
+
 ## Downloads
 
 | Platform | File |
