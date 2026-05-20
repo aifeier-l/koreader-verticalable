@@ -42,19 +42,12 @@ jobs:
         run: make TARGET=kindle
       - name: Package
         run: make TARGET=kindle update
-      - name: Rename and generate zsync
-        run: |
-          cp koreader-kindle-*.zip koreader-kindle-latest-stable.zip || true
-          sudo apt-get install -y zsync
-          zsyncmake -u "$OTA_BASE_URL/koreader-kindle-latest-stable.zip" \
-            -o koreader-kindle-latest-stable.zsync \
-            koreader-kindle-latest-stable.zip
+      - name: Rename for release
+        run: cp koreader-kindle-*.zip koreader-kindle-latest-stable.zip || true
       - uses: actions/upload-artifact@v4
         with:
           name: kindle
-          path: |
-            koreader-kindle-latest-stable.zip
-            koreader-kindle-latest-stable.zsync
+          path: koreader-kindle-latest-stable.zip
 
   kindlehf:
     name: Kindle (HF)
@@ -74,19 +67,12 @@ jobs:
         run: make TARGET=kindlehf
       - name: Package
         run: make TARGET=kindlehf update
-      - name: Rename and generate zsync
-        run: |
-          cp koreader-kindlehf-*.zip koreader-kindlehf-latest-stable.zip || true
-          sudo apt-get install -y zsync
-          zsyncmake -u "$OTA_BASE_URL/koreader-kindlehf-latest-stable.zip" \
-            -o koreader-kindlehf-latest-stable.zsync \
-            koreader-kindlehf-latest-stable.zip
+      - name: Rename for release
+        run: cp koreader-kindlehf-*.zip koreader-kindlehf-latest-stable.zip || true
       - uses: actions/upload-artifact@v4
         with:
           name: kindlehf
-          path: |
-            koreader-kindlehf-latest-stable.zip
-            koreader-kindlehf-latest-stable.zsync
+          path: koreader-kindlehf-latest-stable.zip
 
   kobo:
     name: Kobo
@@ -106,19 +92,12 @@ jobs:
         run: make TARGET=kobo
       - name: Package
         run: make TARGET=kobo update
-      - name: Rename and generate zsync
-        run: |
-          cp koreader-kobo-*.zip koreader-kobo-latest-stable.zip || true
-          sudo apt-get install -y zsync
-          zsyncmake -u "$OTA_BASE_URL/koreader-kobo-latest-stable.zip" \
-            -o koreader-kobo-latest-stable.zsync \
-            koreader-kobo-latest-stable.zip
+      - name: Rename for release
+        run: cp koreader-kobo-*.zip koreader-kobo-latest-stable.zip || true
       - uses: actions/upload-artifact@v4
         with:
           name: kobo
-          path: |
-            koreader-kobo-latest-stable.zip
-            koreader-kobo-latest-stable.zsync
+          path: koreader-kobo-latest-stable.zip
 
   pocketbook:
     name: PocketBook
@@ -138,19 +117,12 @@ jobs:
         run: make TARGET=pocketbook
       - name: Package
         run: make TARGET=pocketbook update
-      - name: Rename and generate zsync
-        run: |
-          cp koreader-pocketbook-*.zip koreader-pocketbook-latest-stable.zip || true
-          sudo apt-get install -y zsync
-          zsyncmake -u "$OTA_BASE_URL/koreader-pocketbook-latest-stable.zip" \
-            -o koreader-pocketbook-latest-stable.zsync \
-            koreader-pocketbook-latest-stable.zip
+      - name: Rename for release
+        run: cp koreader-pocketbook-*.zip koreader-pocketbook-latest-stable.zip || true
       - uses: actions/upload-artifact@v4
         with:
           name: pocketbook
-          path: |
-            koreader-pocketbook-latest-stable.zip
-            koreader-pocketbook-latest-stable.zsync
+          path: koreader-pocketbook-latest-stable.zip
 
   cervantes:
     name: Cervantes
@@ -170,19 +142,12 @@ jobs:
         run: make TARGET=cervantes
       - name: Package
         run: make TARGET=cervantes update
-      - name: Rename and generate zsync
-        run: |
-          cp koreader-cervantes-*.zip koreader-cervantes-latest-stable.zip || true
-          sudo apt-get install -y zsync
-          zsyncmake -u "$OTA_BASE_URL/koreader-cervantes-latest-stable.zip" \
-            -o koreader-cervantes-latest-stable.zsync \
-            koreader-cervantes-latest-stable.zip
+      - name: Rename for release
+        run: cp koreader-cervantes-*.zip koreader-cervantes-latest-stable.zip || true
       - uses: actions/upload-artifact@v4
         with:
           name: cervantes
-          path: |
-            koreader-cervantes-latest-stable.zip
-            koreader-cervantes-latest-stable.zsync
+          path: koreader-cervantes-latest-stable.zip
 
   remarkable:
     name: reMarkable
@@ -202,19 +167,12 @@ jobs:
         run: make TARGET=remarkable
       - name: Package
         run: make TARGET=remarkable update
-      - name: Rename and generate zsync
-        run: |
-          cp koreader-remarkable-*.zip koreader-remarkable-latest-stable.zip || true
-          sudo apt-get install -y zsync
-          zsyncmake -u "$OTA_BASE_URL/koreader-remarkable-latest-stable.zip" \
-            -o koreader-remarkable-latest-stable.zsync \
-            koreader-remarkable-latest-stable.zip
+      - name: Rename for release
+        run: cp koreader-remarkable-*.zip koreader-remarkable-latest-stable.zip || true
       - uses: actions/upload-artifact@v4
         with:
           name: remarkable
-          path: |
-            koreader-remarkable-latest-stable.zip
-            koreader-remarkable-latest-stable.zsync
+          path: koreader-remarkable-latest-stable.zip
 
   android-arm:
     name: Android (ARM)
@@ -310,10 +268,25 @@ jobs:
         with:
           path: artifacts/
 
+      - name: Generate zsync files
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y zsync
+          for f in artifacts/**/*-latest-stable.zip; do
+            name=$(basename "$f")
+            base="${name%-latest-stable.zip}"
+            zsyncmake -u "$OTA_BASE_URL/$name" \
+              -o "${f%.zip}.zsync" \
+              "$f"
+          done
+
       - name: Create versioned copies for manual download
         run: |
           TAG=$RELEASE_TAG
           for f in artifacts/**/*-latest-stable.zip; do
+            versioned="${f/latest-stable/$TAG}"
+            cp "$f" "$versioned"
+          done
+          for f in artifacts/**/*-latest-stable.zsync; do
             versioned="${f/latest-stable/$TAG}"
             cp "$f" "$versioned"
           done
