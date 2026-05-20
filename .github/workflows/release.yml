@@ -44,11 +44,16 @@ jobs:
       - name: Rename for release
         run: |
           cp koreader-kindle-*.zip koreader-kindle-latest-stable.zip || true
-          ls *.zip
+      - name: Generate zsync
+        run: |
+          apt-get install -y zsync
+          zsyncmake -o koreader-kindle-latest-stable.zsync koreader-kindle-latest-stable.zip
       - uses: actions/upload-artifact@v4
         with:
           name: kindle
-          path: koreader-kindle-latest-stable.zip
+          path: |
+            koreader-kindle-latest-stable.zip
+            koreader-kindle-latest-stable.zsync
 
   kindlehf:
     name: Kindle (HF)
@@ -70,10 +75,16 @@ jobs:
         run: make TARGET=kindlehf update
       - name: Rename for release
         run: cp koreader-kindlehf-*.zip koreader-kindlehf-latest-stable.zip || true
+      - name: Generate zsync
+        run: |
+          apt-get install -y zsync
+          zsyncmake -o koreader-kindlehf-latest-stable.zsync koreader-kindlehf-latest-stable.zip
       - uses: actions/upload-artifact@v4
         with:
           name: kindlehf
-          path: koreader-kindlehf-latest-stable.zip
+          path: |
+            koreader-kindlehf-latest-stable.zip
+            koreader-kindlehf-latest-stable.zsync
 
   kobo:
     name: Kobo
@@ -95,10 +106,47 @@ jobs:
         run: make TARGET=kobo update
       - name: Rename for release
         run: cp koreader-kobo-*.zip koreader-kobo-latest-stable.zip || true
+      - name: Generate zsync
+        run: |
+          apt-get install -y zsync
+          zsyncmake -o koreader-kobo-latest-stable.zsync koreader-kobo-latest-stable.zip
       - uses: actions/upload-artifact@v4
         with:
           name: kobo
-          path: koreader-kobo-latest-stable.zip
+          path: |
+            koreader-kobo-latest-stable.zip
+            koreader-kobo-latest-stable.zsync
+
+  pocketbook:
+    name: PocketBook
+    runs-on: ubuntu-latest
+    container:
+      image: koreader/kopb:0.4.6-22.04
+    env:
+      BASH_ENV: /home/ko/.bashrc
+      TARGET: pocketbook
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch submodules
+        run: make fetchthirdparty
+      - name: Build
+        run: make TARGET=pocketbook
+      - name: Package
+        run: make TARGET=pocketbook update
+      - name: Rename for release
+        run: cp koreader-pocketbook-*.zip koreader-pocketbook-latest-stable.zip || true
+      - name: Generate zsync
+        run: |
+          apt-get install -y zsync
+          zsyncmake -o koreader-pocketbook-latest-stable.zsync koreader-pocketbook-latest-stable.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pocketbook
+          path: |
+            koreader-pocketbook-latest-stable.zip
+            koreader-pocketbook-latest-stable.zsync
 
   android-arm:
     name: Android (ARM)
@@ -175,7 +223,7 @@ jobs:
 
   release:
     name: Create Release
-    needs: [kindle, kindlehf, kobo, android-arm, android-arm64]
+    needs: [kindle, kindlehf, kobo, pocketbook, android-arm, android-arm64]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -213,6 +261,7 @@ jobs:
             | Kindle (legacy) | `koreader-kindle-latest-stable.zip` |
             | Kindle (HF) | `koreader-kindlehf-latest-stable.zip` |
             | Kobo | `koreader-kobo-latest-stable.zip` |
+            | PocketBook | `koreader-pocketbook-latest-stable.zip` |
             | Android (ARM64, most phones) | `koreader-android-arm64-latest-stable.apk` |
             | Android (ARM 32-bit) | `koreader-android-latest-stable.apk` |
 

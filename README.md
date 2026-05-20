@@ -15,6 +15,7 @@ It is regularly synced with upstream KOReader.
 | Kindle (legacy) | `koreader-kindle-latest-stable.zip` |
 | Kindle (HF) | `koreader-kindlehf-latest-stable.zip` |
 | Kobo | `koreader-kobo-latest-stable.zip` |
+| PocketBook | `koreader-pocketbook-latest-stable.zip` |
 | Android (ARM64, most modern phones) | `koreader-android-arm64-latest-stable.apk` |
 | Android (ARM 32-bit) | `koreader-android-latest-stable.apk` |
 
