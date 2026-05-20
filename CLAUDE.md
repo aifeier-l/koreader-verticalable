@@ -36,6 +36,20 @@ doc_y  = page_y + (horizontal offset from right edge)  →  screen_x = page_righ
 doc_x  = vertical pixel position in column             →  screen_y = doc_x
 ```
 
+```mermaid
+graph LR
+    subgraph doc["Formatter / Doc Space  (Y=X swapped)"]
+        FY["c_y / fmt.setY()\nblock-direction advance\n= column progression"]
+        FX["c_x / fmt.setX()\ninline-start\n= glyph position in column"]
+    end
+    subgraph draw["Draw() — after swap(x,y) at entry"]
+        LX["line_x = clip.right − x\ncolumn screen-X  (right → left)"]
+        LY["y + frmline->x + advance\nglyph screen-Y  (top → bottom)"]
+    end
+    FY -->|"→ x after swap"| LX
+    FX -->|"→ y after swap"| LY
+```
+
 ### FlowState (lvrend.cpp)
 
 - `c_x` = accumulated horizontal advance (column progression)
@@ -105,54 +119,25 @@ y0 = y + frmline->x + clamped_x;        // screen Y = clip.top + indent + char a
 // Glyph center = x0 + em/2 = line_x - strut/2  ✓
 ```
 
-#### Inline box (ruby group) DrawDocument call
+#### Inline box (ruby group) draw
 
-When Draw() encounters an inline box (LTEXT_WORD_IS_OBJECT) word in vertical mode:
+`doc_y_ib = −node_y` cancels the inline box's own `getY() = node_y`, so by the time
+DrawDocument reaches the ruby cells `doc_y` holds only the cell's own offset.
+`x0 = y + node_x + clamp_delta` positions the group's screen-Y start after the preceding
+character (clamping prevents overlap with the previous glyph's visual end).
 
+```mermaid
+flowchart TD
+    CALL["outer Draw() — on inline box word\nx0 = y + node_x + clamp_delta\ny0 = x + node_y\ndoc_x_ib = −node_x,  doc_y_ib = −node_y"]
+    L0["DrawDoc(inline_box)  getY()=node_y\ndoc_y = −node_y + node_y = 0"]
+    L2["DrawDoc(ruby_row)  getY()=0\ndoc_y = 0"]
+    L3a["DrawDoc(base_cell)  getY()=annot_width\ndoc_y = annot_width\nf→Draw(x0, y0+annot_width)\nline_x = clip.right − (node_y+annot_width)  ✓"]
+    L3b["DrawDoc(annot_cell)  getY()=0\ndoc_y = 0\nf→Draw(x0, y0)\nline_x = clip.right − node_y  ✓"]
+
+    CALL --> L0 --> L2
+    L2 --> L3a
+    L2 --> L3b
 ```
-node_x = node_fmt.getX()  // inline-start offset (screen-Y direction)
-node_y = node_fmt.getY()  // block-direction offset (= accumulated column advance in block)
-x      = draw_y0 = 0      // current block's column-start offset from page-start
-
-x0     = y + node_x + clamp_delta   // screen-Y start of inner content
-y0     = x + node_y = 0 + node_y    // column offset of inline box (block-direction)
-doc_x_ib = 0 - node_x
-doc_y_ib = 0 - node_y               // ← needed to cancel inline box's own getY() (see below)
-DrawDocument(buf, node, x0, y0, dx, dy, doc_x_ib, doc_y_ib, ...)
-```
-
-#### DrawDocument recursion and doc_y accumulation
-
-**Critical**: DrawDocument FIRST applies `doc_x += fmt.getX()` and `doc_y += fmt.getY()` for
-the **current node** it was called on, before recursing into children.
-
-So when DrawDocument is called on the inline box node with `doc_y_ib = -node_y`:
-
-```
-Level 0: DrawDocument(inline_box)
-  doc_y += inline_box.getY()  → doc_y = -node_y + node_y = 0
-
-  Level 1: DrawDocument(ruby_table)   ruby_table.getY() = 0
-    doc_y += 0  → doc_y = 0
-
-    Level 2: DrawDocument(ruby_row)   row.getY() = 0
-      doc_y += 0  → doc_y = 0
-
-      Level 3a: DrawDocument(base_cell)   base_cell.getY() = annot_width
-        doc_y += annot_width  → doc_y = annot_width
-        f->Draw(buf, x0+doc_x, y0+doc_y=node_y+annot_width, ...)
-        → inner Draw: x_new = node_y + annot_width
-        → inner_line_x = clip.right − (node_y + annot_width)  ✓
-
-      Level 3b: DrawDocument(annot_cell)  annot_cell.getY() = 0
-        doc_y += 0  → doc_y = 0
-        f->Draw(buf, x0+doc_x, y0+doc_y=node_y, ...)
-        → inner Draw: x_new = node_y
-        → inner_line_x = clip.right − node_y  ✓
-```
-
-So `doc_y_ib = -node_y` is correct: it cancels the inline box's own `getY()` so the
-inner formatters receive the correct absolute column offsets.
 
 #### Ruby cell column positions (vertical-rl)
 
