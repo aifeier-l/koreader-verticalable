@@ -43,11 +43,15 @@ jobs:
       - name: Package
         run: make TARGET=kindle update
       - name: Rename for release
-        run: cp koreader-kindle-*.zip koreader-kindle-latest-stable.zip || true
+        run: |
+          cp koreader-kindle-*.zip koreader-kindle-latest-stable.zip || true
+          cp koreader-kindle-*.targz koreader-kindle-latest-stable.targz || true
       - uses: actions/upload-artifact@v4
         with:
           name: kindle
-          path: koreader-kindle-latest-stable.zip
+          path: |
+            koreader-kindle-latest-stable.zip
+            koreader-kindle-latest-stable.targz
 
   kindlehf:
     name: Kindle (HF)
@@ -68,11 +72,15 @@ jobs:
       - name: Package
         run: make TARGET=kindlehf update
       - name: Rename for release
-        run: cp koreader-kindlehf-*.zip koreader-kindlehf-latest-stable.zip || true
+        run: |
+          cp koreader-kindlehf-*.zip koreader-kindlehf-latest-stable.zip || true
+          cp koreader-kindlehf-*.targz koreader-kindlehf-latest-stable.targz || true
       - uses: actions/upload-artifact@v4
         with:
           name: kindlehf
-          path: koreader-kindlehf-latest-stable.zip
+          path: |
+            koreader-kindlehf-latest-stable.zip
+            koreader-kindlehf-latest-stable.targz
 
   kindlepw2:
     name: Kindle (PW2/non-HF)
@@ -93,11 +101,15 @@ jobs:
       - name: Package
         run: make TARGET=kindlepw2 update
       - name: Rename for release
-        run: cp koreader-kindlepw2-*.zip koreader-kindlepw2-latest-stable.zip || true
+        run: |
+          cp koreader-kindlepw2-*.zip koreader-kindlepw2-latest-stable.zip || true
+          cp koreader-kindlepw2-*.targz koreader-kindlepw2-latest-stable.targz || true
       - uses: actions/upload-artifact@v4
         with:
           name: kindlepw2
-          path: koreader-kindlepw2-latest-stable.zip
+          path: |
+            koreader-kindlepw2-latest-stable.zip
+            koreader-kindlepw2-latest-stable.targz
 
   kobo:
     name: Kobo
@@ -118,11 +130,15 @@ jobs:
       - name: Package
         run: make TARGET=kobo update
       - name: Rename for release
-        run: cp koreader-kobo-*.zip koreader-kobo-latest-stable.zip || true
+        run: |
+          cp koreader-kobo-*.zip koreader-kobo-latest-stable.zip || true
+          cp koreader-kobo-*.targz koreader-kobo-latest-stable.targz || true
       - uses: actions/upload-artifact@v4
         with:
           name: kobo
-          path: koreader-kobo-latest-stable.zip
+          path: |
+            koreader-kobo-latest-stable.zip
+            koreader-kobo-latest-stable.targz
 
   pocketbook:
     name: PocketBook
@@ -143,11 +159,15 @@ jobs:
       - name: Package
         run: make TARGET=pocketbook update
       - name: Rename for release
-        run: cp koreader-pocketbook-*.zip koreader-pocketbook-latest-stable.zip || true
+        run: |
+          cp koreader-pocketbook-*.zip koreader-pocketbook-latest-stable.zip || true
+          cp koreader-pocketbook-*.targz koreader-pocketbook-latest-stable.targz || true
       - uses: actions/upload-artifact@v4
         with:
           name: pocketbook
-          path: koreader-pocketbook-latest-stable.zip
+          path: |
+            koreader-pocketbook-latest-stable.zip
+            koreader-pocketbook-latest-stable.targz
 
   cervantes:
     name: Cervantes
@@ -168,11 +188,15 @@ jobs:
       - name: Package
         run: make TARGET=cervantes update
       - name: Rename for release
-        run: cp koreader-cervantes-*.zip koreader-cervantes-latest-stable.zip || true
+        run: |
+          cp koreader-cervantes-*.zip koreader-cervantes-latest-stable.zip || true
+          cp koreader-cervantes-*.targz koreader-cervantes-latest-stable.targz || true
       - uses: actions/upload-artifact@v4
         with:
           name: cervantes
-          path: koreader-cervantes-latest-stable.zip
+          path: |
+            koreader-cervantes-latest-stable.zip
+            koreader-cervantes-latest-stable.targz
 
   remarkable:
     name: reMarkable (armhf)
@@ -193,11 +217,15 @@ jobs:
       - name: Package
         run: make TARGET=remarkable update
       - name: Rename for release
-        run: cp koreader-remarkable-*.zip koreader-remarkable-latest-stable.zip || true
+        run: |
+          cp koreader-remarkable-*.zip koreader-remarkable-latest-stable.zip || true
+          cp koreader-remarkable-*.targz koreader-remarkable-latest-stable.targz || true
       - uses: actions/upload-artifact@v4
         with:
           name: remarkable
-          path: koreader-remarkable-latest-stable.zip
+          path: |
+            koreader-remarkable-latest-stable.zip
+            koreader-remarkable-latest-stable.targz
 
   remarkable-aarch64:
     name: reMarkable (aarch64)
@@ -218,11 +246,15 @@ jobs:
       - name: Package
         run: make TARGET=remarkable-aarch64 update
       - name: Rename for release
-        run: cp koreader-remarkable-aarch64-*.zip koreader-remarkable-aarch64-latest-stable.zip || true
+        run: |
+          cp koreader-remarkable-aarch64-*.zip koreader-remarkable-aarch64-latest-stable.zip || true
+          cp koreader-remarkable-aarch64-*.targz koreader-remarkable-aarch64-latest-stable.targz || true
       - uses: actions/upload-artifact@v4
         with:
           name: remarkable-aarch64
-          path: koreader-remarkable-aarch64-latest-stable.zip
+          path: |
+            koreader-remarkable-aarch64-latest-stable.zip
+            koreader-remarkable-aarch64-latest-stable.targz
 
   android-arm:
     name: Android (ARM)
@@ -324,11 +356,15 @@ jobs:
           # kobov5: same binary as kobo (FW 5.x uses different ota_model string)
           cp artifacts/kobo/koreader-kobo-latest-stable.zip \
              artifacts/kobo/koreader-kobov5-latest-stable.zip
+          cp artifacts/kobo/koreader-kobo-latest-stable.targz \
+             artifacts/kobo/koreader-kobov5-latest-stable.targz
           # kindle-legacy: same binary as kindle (non-touch Kindles)
           cp artifacts/kindle/koreader-kindle-latest-stable.zip \
              artifacts/kindle/koreader-kindle-legacy-latest-stable.zip
-          # Versioned copies of all zips (used as zsyncmake input and for manual download)
-          for f in artifacts/**/*-latest-stable.zip; do
+          cp artifacts/kindle/koreader-kindle-latest-stable.targz \
+             artifacts/kindle/koreader-kindle-legacy-latest-stable.targz
+          # Versioned copies of all zips and targz files
+          for f in artifacts/**/*-latest-stable.zip artifacts/**/*-latest-stable.targz; do
             cp "$f" "${f/latest-stable/$TAG}"
           done
           # Versioned copies of APKs
@@ -345,18 +381,21 @@ jobs:
 
       - name: Generate zsync files
         run: |
-          # zsyncmake input = versioned zip  → Filename header = versioned name
-          # OTA manager reads Filename to extract version (v2026.05 pattern)
-          # zsync2 downloads: getOTAServer() + Filename = releases/.../koreader-X-v2026.05.zip
+          # OTA packages are .targz (gzipped tar), not .zip.
+          # koreader.sh applies the update with: tar -xf koreader.updated.tar
+          # GNU tar auto-detects gzip, so .targz works fine.
+          # zsyncmake input = versioned .targz → Filename header = versioned name
+          # OTA manager reads Filename to extract version (v2026.05 pattern).
+          # zsync2 downloads: getOTAServer() + Filename = releases/.../koreader-X-v2026.05.targz
           sudo apt-get update -qq && sudo apt-get install -y zsync
           TAG=$RELEASE_TAG
           shopt -s globstar
-          for f in artifacts/**/*-"$TAG".zip; do
+          for f in artifacts/**/*-"$TAG".targz; do
             name=$(basename "$f")
             stable_name="${name/$TAG/latest-stable}"
             dir=$(dirname "$f")
             zsyncmake -u "$OTA_BASE_URL/$stable_name" \
-              -o "$dir/${stable_name%.zip}.zsync" \
+              -o "$dir/${stable_name%.targz}.zsync" \
               "$f"
           done
           # Versioned zsync copies
