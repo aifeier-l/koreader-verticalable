@@ -28,7 +28,7 @@ jobs:
     name: Kindle
     runs-on: ubuntu-latest
     container:
-      image: koreader/kokindle:0.4.6-22.04
+      image: koreader/kokindle:latest
     env:
       BASH_ENV: /home/ko/.bashrc
       TARGET: kindle
@@ -60,7 +60,7 @@ jobs:
     name: Kindle (HF)
     runs-on: ubuntu-latest
     container:
-      image: koreader/kokindle:0.4.6-22.04
+      image: koreader/kokindle:latest
     env:
       BASH_ENV: /home/ko/.bashrc
       TARGET: kindlehf
@@ -92,7 +92,7 @@ jobs:
     name: Kobo
     runs-on: ubuntu-latest
     container:
-      image: koreader/kokobo:0.4.6-22.04
+      image: koreader/kokobo:latest
     env:
       BASH_ENV: /home/ko/.bashrc
       TARGET: kobo
@@ -124,7 +124,7 @@ jobs:
     name: PocketBook
     runs-on: ubuntu-latest
     container:
-      image: koreader/kopb:0.4.6-22.04
+      image: koreader/kopb:latest
     env:
       BASH_ENV: /home/ko/.bashrc
       TARGET: pocketbook
@@ -220,7 +220,7 @@ jobs:
     name: Android (ARM)
     runs-on: ubuntu-latest
     container:
-      image: koreader/koandroid:0.9.6-22.04
+      image: koreader/koandroid:latest
     env:
       BASH_ENV: /home/ko/.bashrc
       TARGET: android
@@ -257,7 +257,7 @@ jobs:
     name: Android (ARM64)
     runs-on: ubuntu-latest
     container:
-      image: koreader/koandroid:0.9.6-22.04
+      image: koreader/koandroid:latest
     env:
       BASH_ENV: /home/ko/.bashrc
       TARGET: android
