@@ -60,7 +60,7 @@ describe("Vertical text: plain character overlap (文字が被る)", function()
 
         doc._document:resetVertCharOverlapCounters()
 
-        local pages_to_visit = math.min(doc:getPageCount(), 30)
+        local pages_to_visit = math.min(doc:getPageCount(), 200)
         local sw, sh = Screen:getWidth(), Screen:getHeight()
         local sample_xs = {
             math.floor(sw * 0.80),
