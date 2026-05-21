@@ -62,6 +62,25 @@ body { writing-mode: vertical-rl !important; }
   groups and the following character. This is a property of the EPUB source, not a
   rendering bug.
 
+## Support
+
+If you find this vertical text fork useful, you can support its development:
+
+[![Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/mtkydev)
+
+For the KOReader project itself, please see [koreader/koreader](https://github.com/koreader/koreader).
+
+## Acknowledgements
+
+This project is a fork of [KOReader](https://github.com/koreader/koreader),
+an open-source e-book reader developed by volunteers around the world.
+The vertical text (tategumi) implementation is built on top of their work.
+
+## Contributors
+
+[![Last commit](https://img.shields.io/github/last-commit/m-tky/koreader-tategumi?color=orange)](https://github.com/m-tky/koreader-tategumi/commits/master)
+[![License](https://img.shields.io/github/license/koreader/koreader)](https://github.com/koreader/koreader/blob/master/COPYING)
+
 ---
 
 [![KOReader](https://raw.githubusercontent.com/koreader/koreader.github.io/master/koreader-logo.png)](https://koreader.rocks)
@@ -127,23 +146,5 @@ Please follow the model specific steps for your device:
 [Porting](doc/Porting.md) •
 [Developer docs](http://koreader.rocks/doc/)
 
-## Support
-
-If you find this vertical text fork useful, you can support its development:
-
-[![Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/mtkydev)
-
-For the KOReader project itself, please see [koreader/koreader](https://github.com/koreader/koreader).
-
-## Acknowledgements
-
-This project is a fork of [KOReader](https://github.com/koreader/koreader),
-an open-source e-book reader developed by volunteers around the world.
-The vertical text (tategumi) implementation is built on top of their work.
-
-## Contributors
-
-[![Last commit](https://img.shields.io/github/last-commit/m-tky/koreader-tategumi?color=orange)](https://github.com/m-tky/koreader-tategumi/commits/master)
-[![License](https://img.shields.io/github/license/koreader/koreader)](https://github.com/koreader/koreader/blob/master/COPYING)
 [link-forum]:http://www.mobileread.com/forums/forumdisplay.php?f=276
 [link-wiki]:https://github.com/koreader/koreader/wiki
