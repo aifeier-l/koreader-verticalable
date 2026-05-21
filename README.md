@@ -28,7 +28,17 @@ Installation steps are the same as upstream KOReader:
 [Kindle](https://github.com/koreader/koreader/wiki/Installation-on-Kindle-devices) •
 [Kobo](https://github.com/koreader/koreader/wiki/Installation-on-Kobo-devices)
 
-In-app OTA update is supported. Go to **Menu → Help → Check for updates**.
+In-app OTA update is supported. Go to **Menu → Update → Check for update**.
+
+## Switching from vanilla KOReader
+
+If you already have vanilla KOReader installed, you can switch to this fork without
+reinstalling from scratch:
+
+1. Copy `frontend/ui/otamanager.lua` from this repository into
+   `<koreader-dir>/frontend/ui/otamanager.lua` on your device.
+2. Restart KOReader and go to **Menu → Update → Check for update**.
+3. KOReader will download and apply this fork's build automatically.
 
 ## Using vertical text
 
