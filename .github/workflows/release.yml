@@ -412,32 +412,22 @@ jobs:
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           name: "koreader-tategumi ${{ env.RELEASE_TAG }}"
+          append_body: true
           body: |
-            ## koreader-tategumi ${{ env.RELEASE_TAG }}
+            ## Downloads
 
-            KOReader fork with Japanese vertical text (縦書き/tategumi) rendering support.
-
-            ### Downloads
-
-            | Platform | File |
-            |----------|------|
-            | Kindle (HF / PW5以降) | `koreader-kindlehf-${{ env.RELEASE_TAG }}.zip` |
-            | Kindle (PW2〜PW4, non-HF) | `koreader-kindlepw2-${{ env.RELEASE_TAG }}.zip` |
-            | Kindle (legacy, non-touch) | `koreader-kindle-${{ env.RELEASE_TAG }}.zip` |
-            | Kobo | `koreader-kobo-${{ env.RELEASE_TAG }}.zip` |
-            | PocketBook | `koreader-pocketbook-${{ env.RELEASE_TAG }}.zip` |
-            | Cervantes | `koreader-cervantes-${{ env.RELEASE_TAG }}.zip` |
-            | reMarkable 1 (armhf) | `koreader-remarkable-${{ env.RELEASE_TAG }}.zip` |
-            | reMarkable 2/Paper Pro (aarch64) | `koreader-remarkable-aarch64-${{ env.RELEASE_TAG }}.zip` |
-            | Android (ARM64, most phones) | `koreader-android-arm64-${{ env.RELEASE_TAG }}.apk` |
-            | Android (ARM 32-bit) | `koreader-android-${{ env.RELEASE_TAG }}.apk` |
-
-            `*-latest-stable.*` files are also provided for OTA update support.
-
-            ### Install
-            See [KOReader installation guide](https://github.com/koreader/koreader/wiki/Installation).
-
-            In-app OTA update is supported. Go to **Menu → Help → Check for updates**.
+            | Platform | Package |
+            |----------|---------|
+            | Kindle (HF, Touch and newer) | [koreader-kindlehf-${{ env.RELEASE_TAG }}.zip](https://github.com/m-tky/koreader-tategumi/releases/download/${{ env.RELEASE_TAG }}/koreader-kindlehf-${{ env.RELEASE_TAG }}.zip) |
+            | Kindle (PW2 / non-HF) | [koreader-kindlepw2-${{ env.RELEASE_TAG }}.zip](https://github.com/m-tky/koreader-tategumi/releases/download/${{ env.RELEASE_TAG }}/koreader-kindlepw2-${{ env.RELEASE_TAG }}.zip) |
+            | Kindle (legacy non-touch) | [koreader-kindle-legacy-${{ env.RELEASE_TAG }}.zip](https://github.com/m-tky/koreader-tategumi/releases/download/${{ env.RELEASE_TAG }}/koreader-kindle-legacy-${{ env.RELEASE_TAG }}.zip) |
+            | Kobo | [koreader-kobo-${{ env.RELEASE_TAG }}.zip](https://github.com/m-tky/koreader-tategumi/releases/download/${{ env.RELEASE_TAG }}/koreader-kobo-${{ env.RELEASE_TAG }}.zip) |
+            | PocketBook | [koreader-pocketbook-${{ env.RELEASE_TAG }}.zip](https://github.com/m-tky/koreader-tategumi/releases/download/${{ env.RELEASE_TAG }}/koreader-pocketbook-${{ env.RELEASE_TAG }}.zip) |
+            | Cervantes | [koreader-cervantes-${{ env.RELEASE_TAG }}.zip](https://github.com/m-tky/koreader-tategumi/releases/download/${{ env.RELEASE_TAG }}/koreader-cervantes-${{ env.RELEASE_TAG }}.zip) |
+            | reMarkable (armhf) | [koreader-remarkable-${{ env.RELEASE_TAG }}.zip](https://github.com/m-tky/koreader-tategumi/releases/download/${{ env.RELEASE_TAG }}/koreader-remarkable-${{ env.RELEASE_TAG }}.zip) |
+            | reMarkable (aarch64) | [koreader-remarkable-aarch64-${{ env.RELEASE_TAG }}.zip](https://github.com/m-tky/koreader-tategumi/releases/download/${{ env.RELEASE_TAG }}/koreader-remarkable-aarch64-${{ env.RELEASE_TAG }}.zip) |
+            | Android (ARM) | [koreader-android-${{ env.RELEASE_TAG }}.apk](https://github.com/m-tky/koreader-tategumi/releases/download/${{ env.RELEASE_TAG }}/koreader-android-${{ env.RELEASE_TAG }}.apk) |
+            | Android (ARM64) | [koreader-android-arm64-${{ env.RELEASE_TAG }}.apk](https://github.com/m-tky/koreader-tategumi/releases/download/${{ env.RELEASE_TAG }}/koreader-android-arm64-${{ env.RELEASE_TAG }}.apk) |
           files: artifacts/**/*
           draft: false
           prerelease: false
