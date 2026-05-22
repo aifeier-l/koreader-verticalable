@@ -56,6 +56,7 @@ local ReaderToc = require("apps/reader/modules/readertoc")
 local ReaderTypeset = require("apps/reader/modules/readertypeset")
 local ReaderTypography = require("apps/reader/modules/readertypography")
 local ReaderUserHyph = require("apps/reader/modules/readeruserhyph")
+local ReaderAutoDirection = require("apps/reader/modules/reader_auto_direction")
 local ReaderView = require("apps/reader/modules/readerview")
 local ReaderWikipedia = require("apps/reader/modules/readerwikipedia")
 local ReaderZooming = require("apps/reader/modules/readerzooming")
@@ -450,6 +451,13 @@ function ReaderUI:init()
         document = self.document,
         view = self.view,
         ui = self,
+    })
+    -- Auto-detect RTL/LTR from document metadata (EPUB OPF / CBZ ComicInfo.xml).
+    -- Registered last so ReaderView's onReadSettings runs first.
+    self:registerModule("auto_direction", ReaderAutoDirection:new{
+        view = self.view,
+        ui = self,
+        document = self.document,
     })
 
     -- koreader plugins

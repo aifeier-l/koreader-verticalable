@@ -52,6 +52,21 @@ For EPUBs that do not include this CSS, add the following via
 body { writing-mode: vertical-rl !important; }
 ```
 
+## RTL page order (漫画・右開き)
+
+Japanese manga EPUBs and CBZ/CBR files with right-to-left page order are detected
+automatically when you open them for the first time:
+
+- **EPUB**: reads `page-progression-direction="rtl"` from the OPF spine
+- **CBZ/CBR**: reads `<ReadingDirection>RTL</ReadingDirection>` from `ComicInfo.xml`
+
+When RTL is detected a notification appears, the page-turn direction is reversed,
+and the progress bar fills from right (page 1) to left (last page).
+
+You can always override the detected direction via
+**Menu → Taps & gestures → Page turns → Switch page-turn direction**.
+The override is saved per-book and will not be overwritten on subsequent opens.
+
 ## Known limitations
 
 - **Mixed horizontal/vertical layouts are not supported.** A single document renders
