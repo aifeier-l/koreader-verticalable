@@ -21,6 +21,7 @@ defaults:
 env:
   MAKEFLAGS: "PARALLEL_JOBS=3 OUTPUT_DIR=build"
   OTA_BASE_URL: "https://github.com/m-tky/koreader-tategumi/releases/latest/download"
+  RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
 
 jobs:
 
