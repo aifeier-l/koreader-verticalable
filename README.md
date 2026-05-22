@@ -46,7 +46,7 @@ EPUBs that already contain `writing-mode: vertical-rl` in their CSS (e.g. most c
 Japanese novels) will render in vertical mode automatically.
 
 For EPUBs that do not include this CSS, add the following via
-**Menu → Tools → Style tweaks → Custom CSS**:
+**Typeset (Aa icon) → Style tweaks → Book-specific tweak** (long-press to edit):
 
 ```css
 body { writing-mode: vertical-rl !important; }
