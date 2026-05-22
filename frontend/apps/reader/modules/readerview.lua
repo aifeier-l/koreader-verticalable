@@ -1020,7 +1020,10 @@ function ReaderView:onReadSettings(config)
     else
         self.invert_ui_layout = G_reader_settings:isTrue("invert_ui_layout")
     end
-    self.footer:invertProgressBar(self.invert_ui_layout)
+    -- Progress bar: invert when UI is mirrored, or when RTL reading order is active.
+    -- XOR with mirroredUILayout() ensures the two effects cancel in a mirrored-UI locale.
+    local is_rtl = self.inverse_reading_order ~= BD.mirroredUILayout()
+    self.footer:invertProgressBar(self.invert_ui_layout or is_rtl)
     self.page_overlap_enable = config:isTrue("show_overlap_enable") or G_reader_settings:isTrue("page_overlap_enable") or G_defaults:readSetting("DSHOWOVERLAP")
     self.page_overlap_style = config:readSetting("page_overlap_style") or G_reader_settings:readSetting("page_overlap_style") or "dim"
     self.page_gap.height = Screen:scaleBySize(config:readSetting("kopt_page_gap_height")
@@ -1038,7 +1041,8 @@ function ReaderView:onToggleUILayoutMiroring(toggle)
     end
     if self.invert_ui_layout ~= toggle then
         self.invert_ui_layout = toggle
-        self.footer:invertProgressBar(self.invert_ui_layout)
+        local is_rtl = self.inverse_reading_order ~= BD.mirroredUILayout()
+        self.footer:invertProgressBar(self.invert_ui_layout or is_rtl)
     end
     return true
 end
@@ -1344,6 +1348,8 @@ function ReaderView:onToggleReadingOrder(toggle)
         self:setupTouchZones()
         local is_rtl = self.inverse_reading_order ~= BD.mirroredUILayout() -- mirrored reading
         Notification:notify(is_rtl and _("RTL page turning.") or _("LTR page turning."))
+        -- Keep progress bar direction in sync with reading order.
+        self.footer:invertProgressBar(self.invert_ui_layout or is_rtl)
     end
     return true
 end
