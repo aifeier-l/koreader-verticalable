@@ -2050,6 +2050,9 @@ function ReaderHighlight:lookupDictWord()
             UIManager:show(InfoMessage:new{
                 text = info_message_ocr_text,
             })
+            UIManager:scheduleIn(G_defaults:readSetting("DELAY_CLEAR_HIGHLIGHT_S"),function()
+                self:clear()
+            end)
         end
     end
 end
@@ -2091,6 +2094,9 @@ function ReaderHighlight:translate(index)
             UIManager:show(InfoMessage:new{
                 text = info_message_ocr_text,
             })
+            UIManager:scheduleIn(G_defaults:readSetting("DELAY_CLEAR_HIGHLIGHT_S"),function()
+                self:clear()
+            end)
         end
     end
 end

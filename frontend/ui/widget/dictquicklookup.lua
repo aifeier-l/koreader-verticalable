@@ -182,7 +182,7 @@ local DictQuickLookup = InputContainer:extend{
 DictQuickLookup.temp_large_window_request = nil
 
 function DictQuickLookup.getWikiSaveEpubDefaultDir()
-    local dir = G_reader_settings:readSetting("home_dir") or filemanagerutil.getDefaultDir()
+    local dir = filemanagerutil.getHomeFolder()
     if dir:sub(-1) ~= "/" then
         dir = dir .. "/"
     end
@@ -1038,7 +1038,7 @@ function DictQuickLookup:buildButtonLayout()
         -- We must do util.tableDeepCopy here so we don't accidentally save
         -- transient buttons into user settings!
         local config = G_reader_settings:readSetting("dict_button_config")
-        button_layout = config and util.tableDeepCopy(config.layout) or default_layout
+        button_layout = util.tableDeepCopy(config and config.layout or default_layout)
     end
 
     local frame_bordersize = Size.border.window
