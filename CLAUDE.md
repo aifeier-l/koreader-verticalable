@@ -256,6 +256,53 @@ spec/unit/vertical_option_c_spec.lua            Option C: uniform column y_base 
 spec/unit/ruby_annot_y_spec.lua                 Ruby cell placement regression
 ```
 
+## Submodule Chain — commit correspondence
+
+When making C++ changes (crengine), all three repos must be committed and
+pushed in order. **The CI fetches each submodule by SHA; if any SHA is not
+reachable from the remote's default branch the build will fail.**
+
+```
+koreader-tategumi  (github.com/m-tky/koreader-tategumi)
+  └─ base          (github.com/m-tky/koreader-base)
+       └─ crengine (github.com/m-tky/crengine)
+```
+
+### Workflow for crengine changes
+
+```bash
+# 1. Commit in crengine, push to m-tky/crengine
+cd base/thirdparty/kpvcrlib/crengine
+git commit -am "..."
+git push mytky HEAD:master   # or cherry-pick onto mytky/master if detached
+
+# 2. Update base pointer, push to m-tky/koreader-base
+cd ../../..                  # = base/
+git add thirdparty/kpvcrlib/crengine
+git commit -m "crengine: ..."
+git push mytky HEAD:master   # or cherry-pick onto mytky/master if detached
+
+# 3. Update main repo pointer, push, retag
+cd ..                        # = koreader/
+git add base
+git commit -m "base: ..."
+git push origin master
+git tag -d vYYYY.MM.P && git push origin :refs/tags/vYYYY.MM.P
+git tag -a vYYYY.MM.P -m "..." && git push origin vYYYY.MM.P
+```
+
+### Pitfall: detached HEAD in base/crengine
+
+Both `base` and `crengine` are often in detached HEAD state.
+Commits made in detached HEAD are NOT on any remote branch.
+Always cherry-pick onto the tracked branch (`mytky/master`) before pushing:
+
+```bash
+git checkout mytky/master -b tmp-push
+git cherry-pick <sha>
+git push mytky tmp-push:master
+```
+
 ## Test EPUBs
 
 `test/fixtures/vertical_text/sanshiro.epub` (三四郎, Natsume Soseki) — main test EPUB with ruby annotations.
