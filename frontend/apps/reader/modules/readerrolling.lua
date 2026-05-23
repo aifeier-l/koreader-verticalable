@@ -810,14 +810,24 @@ function ReaderRolling:onGotoXPointer(xp, marker_xp)
 
     if marker_xp and marker_setting then
         -- Show a mark on left side of screen to give a visual feedback of
-        -- where xpointer target is (and remove if after 1s)
+        -- where xpointer target is (and remove if after 1s).
         local screen_y, screen_x = self.ui.document:getScreenPositionFromXPointer(marker_xp)
         local doc_margins = self.ui.document:getPageMargins()
-        local marker_h = Screen:scaleBySize(self.configurable.font_size * 1.1 * self.configurable.line_spacing * (1/100))
-        -- Make it 4/5 of left margin wide (and bigger when huge margin)
-        local marker_w = math.floor(math.max(doc_margins["left"] - Screen:scaleBySize(5), doc_margins["left"] * 4/5))
+        local is_vertical = self.ui.document.isVerticalText and self.ui.document:isVerticalText()
+        local marker_w, marker_h
+        if is_vertical then
+            marker_w = Screen:scaleBySize(self.configurable.font_size * 1.1 * self.configurable.line_spacing * (1/100))
+            marker_h = math.floor(math.max(doc_margins["top"] - Screen:scaleBySize(5), doc_margins["top"] * 4/5))
+        else
+            marker_h = Screen:scaleBySize(self.configurable.font_size * 1.1 * self.configurable.line_spacing * (1/100))
+            -- Make it 4/5 of left margin wide (and bigger when huge margin)
+            marker_w = math.floor(math.max(doc_margins["left"] - Screen:scaleBySize(5), doc_margins["left"] * 4/5))
+        end
 
-        if self.ui.document:getVisiblePageCount() > 1 then -- 2-pages mode
+        if is_vertical then
+            screen_x = screen_x - marker_w  -- screen_x is column right edge; shift left by width
+            screen_y = self.ui.document.getHeaderHeight and self.ui.document:getHeaderHeight() or 0
+        elseif self.ui.document:getVisiblePageCount() > 1 then -- 2-pages mode
             if screen_x < Screen:getWidth() / 2 then -- On left page
                 if BD.mirroredUILayout() then
                     -- In the middle margin, on the right of text
