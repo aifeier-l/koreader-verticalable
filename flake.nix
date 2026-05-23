@@ -46,6 +46,10 @@
             luajitPackages.luacheck
             shellcheck shfmt
             zip
+            # CI lint tools (crengine/.github/workflows/build.yml runs clang-tidy + cppcheck)
+            clang-tools cppcheck
+            # System libs needed for crengine lint to resolve includes via pkg-config
+            harfbuzz freetype fribidi libunibreak libutf8proc
           ];
 
           shellHook = ''
