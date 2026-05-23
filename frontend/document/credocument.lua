@@ -886,13 +886,21 @@ function CreDocument:getScreenPositionFromXPointer(xp)
     local top_y = self:getCurrentPos()
     local screen_y, screen_x
     if self:isVerticalText() then
-        -- Mirror of docToWindowPoint vertical branch in lvdocview.cpp.
-        local CanvasContext = require("document/canvascontext")
-        local page_right = CanvasContext:getWidth() - doc_margins["right"]
-        screen_x = page_right - (doc_y - top_y)
-        screen_y = doc_x
-        if self._view_mode == self.PAGE_VIEW_MODE then
-            screen_y = screen_y + doc_margins["top"] + self:getHeaderHeight()
+        -- Use crengine's docToWindowPoint to get the correctly-centered screen
+        -- position (vertPageRight includes a centering offset when the page
+        -- content is narrower than the text area; a hand-rolled mirror would
+        -- omit it and produce a marker shifted into the right margin).
+        screen_x, screen_y = self._document:docToScreenPoint(doc_y, doc_x)
+        if not screen_x then
+            -- Off-screen: return doc-derived fallback so callers can still
+            -- check direction/visibility.
+            local CanvasContext = require("document/canvascontext")
+            local page_right = CanvasContext:getWidth() - doc_margins["right"]
+            screen_x = page_right - (doc_y - top_y)
+            screen_y = doc_x
+            if self._view_mode == self.PAGE_VIEW_MODE then
+                screen_y = screen_y + doc_margins["top"] + self:getHeaderHeight()
+            end
         end
     else
         screen_y = doc_y - top_y
