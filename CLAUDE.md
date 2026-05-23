@@ -1,5 +1,23 @@
 # KOReader Vertical Text (vertical-rl) Implementation
 
+## Soft Fork Policy
+
+This project is a soft fork of koreader/koreader + koreader/koreader-base +
+crengine, maintained as m-tky/koreader-tategumi, m-tky/koreader-base, and
+m-tky/crengine. Upstreaming is not the goal, but the fork must remain easy
+to rebase onto upstream updates. Therefore:
+
+- **Minimal, targeted changes**: Modify only the functions and files necessary
+  for the fix. Preserve upstream style, naming conventions, and comment culture.
+- **Do not touch upstream code unnecessarily**: Do not clean up commented-out
+  debug code or reorganize existing comments — this widens the diff for no gain.
+- **No debug code in commits**: Remove all diagnostic `fprintf(stderr, ...)`
+  and similar instrumentation before committing.
+- **Issues and PRs go to m-tky repos only**: Never open issues or PRs against
+  upstream repositories (koreader/koreader, etc.) by mistake.
+- **All written communication in English**: Code, comments, commit messages,
+  issues, PRs, and documentation must all be written in English.
+
 ## Project Goal
 
 Implement Japanese vertical-rl text rendering in KOReader/crengine.
