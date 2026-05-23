@@ -110,5 +110,50 @@ describe("Vertical text: per-slot offset record/lookup", function()
             string.format("docToWindowPoint did NOT hit any slot record (Δhits=%d).  "
                        .. "Formatter is keying records by a position the layout "
                        .. "doesn't store (likely clamped_x instead of word->x).", dh))
+
+        -- (4) Sbox height ≥ ~half its width for a single CJK char.
+        --     Vertical-rl sbox corners are paired (topLeft + bottomRight).  By
+        --     geometry the bottomRight's anchor lands on the column's opposite
+        --     edge and its slot_y at glyph_top+height — its own per-slot lookup
+        --     misses by design.  Before the offset-sharing fix the bottomRight
+        --     would fall back to the page-wide min while topLeft got a per-glyph
+        --     offset, producing a stunted sbox (h ≪ w) and the glyph poked out
+        --     below the highlight.  After the fix, bottomRight inherits the
+        --     topLeft's offset, so top and bottom shift uniformly.
+        --
+        --     We probe several positions; the bug presents as sbox h ≤ w/2
+        --     (pre-fix measured h=20, w=40 → ratio 0.5).  After offset-sharing
+        --     normal CJK glyphs land at h ≈ w (ratio ≈ 1.0), small punctuation
+        --     at h ≈ w/2+ε (still strictly > w/2).  Threshold `h*2 > w` is the
+        --     boundary that catches the regression without false-positiving on
+        --     legitimately short glyphs.  At least one probe must land on a
+        --     full-height glyph (ratio ≥ 0.9) to prove we did exercise the
+        --     non-stunted path.
+        local probed = 0
+        local saw_full = false
+        for _, fx in ipairs({0.85, 0.75, 0.65, 0.55, 0.45, 0.35}) do
+        for _, fy in ipairs({0.3, 0.5, 0.7}) do
+            local ok, wb = pcall(function()
+                return doc:getWordFromPosition({x = math.floor(sw * fx),
+                                                y = math.floor(sh * fy)})
+            end)
+            if ok and wb and wb.sbox and wb.sbox.w > 0 then
+                probed = probed + 1
+                assert.is_true(wb.sbox.h * 2 > wb.sbox.w,
+                    string.format("sbox stunted: w=%d h=%d (h must be > w/2; "
+                               .. "bottomRight is falling back to page-wide min "
+                               .. "instead of inheriting topLeft's per-glyph offset)",
+                               wb.sbox.w, wb.sbox.h))
+                if wb.sbox.h * 10 >= wb.sbox.w * 9 then  -- ratio >= 0.9
+                    saw_full = true
+                end
+            end
+        end
+        end
+        assert.is_true(probed > 0,
+            "no sbox returned by any probe — test cannot verify sbox height")
+        assert.is_true(saw_full,
+            "no probe hit a full-height CJK glyph — test did not exercise the "
+         .. "case the offset-sharing fix is intended to repair")
     end)
 end)
