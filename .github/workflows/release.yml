@@ -340,6 +340,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Determine tag
         run: |
@@ -409,13 +411,25 @@ jobs:
       - name: List artifacts
         run: find artifacts/ -type f | sort
 
+      - name: Extract tag annotation
+        run: |
+          git fetch --tags --force 2>/dev/null || true
+          DELIM=$(openssl rand -hex 8)
+          {
+            echo "TAG_NOTES<<$DELIM"
+            git for-each-ref "refs/tags/$RELEASE_TAG" --format='%(contents)' 2>/dev/null || true
+            echo "$DELIM"
+          } >> $GITHUB_ENV
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           name: "koreader-tategumi ${{ env.RELEASE_TAG }}"
-          append_body: true
           body: |
+            ${{ env.TAG_NOTES }}
+
+
             ## Downloads
 
             | Platform | Package |
