@@ -48,12 +48,21 @@ jobs:
             echo "SYNC_BRANCH=$BRANCH" >> $GITHUB_ENV
           fi
 
-      - name: Restore our .gitmodules (pin base to m-tky/koreader-base)
+      - name: Restore our submodule pins (base and .gitmodules)
         if: env.MERGE_FAILED != 'true'
         run: |
-          git checkout ORIG_HEAD -- .gitmodules
-          if ! git diff --quiet HEAD .gitmodules; then
-            git add .gitmodules
+          # ORIG_HEAD is only set when a merge commit was created.
+          # If upstream had nothing new, skip this step entirely.
+          if ! git rev-parse --verify ORIG_HEAD > /dev/null 2>&1; then
+            echo "Already up to date — nothing to restore."
+            exit 0
+          fi
+          CHANGED=0
+          git checkout ORIG_HEAD -- .gitmodules base
+          if ! git diff --cached --quiet; then
+            CHANGED=1
+          fi
+          if [ "$CHANGED" = "1" ]; then
             git commit --amend --no-edit
           fi
 
