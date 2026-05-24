@@ -1,20 +1,23 @@
 ---
 name: Feature request
-about: Share an idea or suggestion
-title: 'FR: [a handful of words describing the FR]'
+about: Suggest a feature for vertical (tategumi) text rendering
+title: 'FR: '
 labels: enhancement
 assignees: ''
 
 ---
 
-**Does your feature request involve difficulty completing a task? Please describe.**
-A clear and concise description of what the problem is. Ex. I think it takes too many steps to [...]
+> **Scope note:** This fork focuses exclusively on Japanese vertical text (縦書き / tategumi).
+> Feature requests outside this scope will be closed — please direct them to [upstream KOReader](https://github.com/koreader/koreader/issues).
+
+**What problem does this feature address?**
+A clear description of the limitation or difficulty you are experiencing.
 
 **Describe the solution you'd like**
-A clear and concise description of what you'd like to happen.
+A clear description of what you would like to happen.
 
-**Describe alternatives you've considered**
-A clear and concise description of any alternative solutions or features you've considered.
+**Reference material**
+If applicable, link to relevant CSS / OpenType specifications, example EPUBs, or screenshots.
 
 **Additional context**
-Add any additional context or screenshots about the feature request here.
+Any other context about the feature request.

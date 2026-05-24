@@ -1,28 +1,42 @@
 name: Bug report
-description: Create a bug report to help us improve the application
+description: Report a rendering or display issue in vertical (tategumi) text
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to fill out this bug report!
+        Thanks for reporting! This fork focuses on Japanese vertical text (縦書き / tategumi).
+
+        **Note:** Many display issues are caused by font limitations (missing OpenType `vert`/`vrt2` features)
+        rather than rendering bugs. Please read each field carefully before submitting.
 
   - type: checkboxes
     id: preflight-checks
     attributes:
       label: Before submitting
       options:
-        - label: Reproduced the issue with external plugins and user-patches disabled.
+        - label: I searched existing issues and this is not a duplicate.
           required: true
-        - label: Searched existing issues for similar reports.
+        - label: >-
+            This issue is specific to vertical text — it does not occur with horizontal
+            text in upstream KOReader.
           required: true
-        - label: Tested on the latest nightly build ([more information](/koreader/koreader/issues/11068)).
+        - label: >-
+            For display / glyph issues: I tried with a different font and the problem persists.
           required: false
+
+  - type: input
+    id: koreader-version
+    attributes:
+      label: KOReader-tategumi build
+      description: Visible in Menu → Help → About KOReader
+      placeholder: "e.g., 2026.05-tategumi-abc1234"
+    validations:
+      required: true
 
   - type: dropdown
     id: device-type
     attributes:
-      label: Device
-      description: What type of device are you experiencing the problem on?
+      label: Device / platform
       options:
         - Kindle
         - Kobo
@@ -40,20 +54,35 @@ body:
       required: true
 
   - type: input
-    id: koreader-version
+    id: font-name
     attributes:
-      label: KOReader version
-      description: What version of KOReader are you running? (Please test the latest nightly first.)
-      placeholder: e.g., 2026.03, 2025.10-164-gf12ff96ad_2026-03-03
+      label: Font name
+      description: >-
+        Which font are you using? Vertical text requires a font with OpenType `vert`/`vrt2`
+        features for correct glyph orientation (punctuation, brackets, etc.).
+      placeholder: "e.g., Noto Serif CJK JP, IPAMincho, (KOReader built-in)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: writing-mode-setup
+    attributes:
+      label: How is vertical text enabled?
+      options:
+        - The EPUB already contains writing-mode:vertical-rl in its CSS
+        - I added a style tweak in KOReader settings
+        - Not sure
     validations:
       required: true
 
   - type: input
-    id: device-model
+    id: epub-info
     attributes:
-      label: Model and firmware version
-      description: Please specify your device model and firmware version if applicable
-      placeholder: e.g., Kindle Paperwhite 4 (5.16.3), Kobo Clara HD (4.38.23171)
+      label: EPUB title and source
+      description: >-
+        Which book triggers the issue? If it is freely available (e.g., Aozora Bunko),
+        please include the URL so it can be reproduced.
+      placeholder: "e.g., 三四郎 — https://www.aozora.gr.jp/..."
     validations:
       required: false
 
@@ -61,76 +90,29 @@ body:
     id: issue-description
     attributes:
       label: Issue description
-      description: Please describe the issue in detail
-      placeholder: What happened? What did you expect to happen?
+      description: Describe what is wrong and what you expected. Screenshots are very helpful.
+      placeholder: |
+        Expected: 。appears upright in the column.
+        Actual:   。appears rotated sideways.
     validations:
       required: true
-
-  - type: dropdown
-    id: regression
-    attributes:
-      label: Regression
-      description: Did this issue start happening after a recent update?
-      options:
-        - "Yes" # Yes and no are booleans that must be quoted.
-        - "No"
-        - "Not sure"
-    validations:
-      required: true
-
-  - type: input
-    id: last-working-version
-    attributes:
-      label: Last working version
-      description: If this issue is a regression, please specify the last version of KOReader where the issue did not occur.
-      placeholder: e.g., 2026.03, 2025.10-164-gf12ff96ad_2026-03-03
-    validations:
-      required: false
 
   - type: textarea
     id: reproduction-steps
     attributes:
       label: Steps to reproduce
-      description: How can we reproduce this issue?
       value: |
-        1. Go to '...'
-        2. Click on '...'
-        3. Scroll down to '...'
-        4. See error
+        1.
+        2.
+        3.
     validations:
       required: true
-
-  - type: textarea
-    id: crash-log
-    attributes:
-      label: Log
-      description: |
-        Logs are written to `crash.log`. It can normally be found in the KOReader directory:
-        * Cervantes: `/mnt/private/koreader`
-        * Kindle: `koreader/`
-        * Kobo: `.adds/koreader/`
-        * Pocketbook: `applications/koreader/`
-        * Android: Go to [Menu] → Help → Bug Report to save logs to a file
-        * AppImage: Run `koreader-20xx.AppImage 2>&1 | tee crash.log` from the terminal
-        * Deb / Linux: Run `koreader-20xx 2>&1 | tee crash.log` from the terminal
-        * Flatpak: Run `flatpak run rocks.koreader.KOReader 2>&1 | tee crash.log` from the terminal
-      placeholder: Paste the log here or drag and drop the file (zipped if necessary)
-      render: shell
-    validations:
-      required: false
-
-  - type: markdown
-    attributes:
-      value: |
-        **Note:** For non-crash issues, please enable verbose logging:
-        Go to Top menu → Hamburger menu → Help → Report a bug and tap 'Enable verbose logging'.
-        Restart as requested, then repeat the steps for your issue.
 
   - type: textarea
     id: additional-information
     attributes:
       label: Additional information
-      description: Any additional information, configuration, or data that might be necessary to reproduce the issue
-      placeholder: Add any other context about the problem here
+      description: Crash logs, screenshots, or any other context
+      placeholder: Paste crash.log contents or drag-and-drop files here
     validations:
       required: false

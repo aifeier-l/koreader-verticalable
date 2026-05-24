@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Upstream KOReader issues
+    url: https://github.com/koreader/koreader/issues
+    about: For issues unrelated to vertical text, please report to upstream KOReader.
