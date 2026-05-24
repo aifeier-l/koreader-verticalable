@@ -40,7 +40,7 @@ jobs:
       - name: Restore our .gitmodules (pin base to m-tky/koreader-base)
         if: env.MERGE_FAILED != 'true'
         run: |
-          git checkout HEAD -- .gitmodules
+          git checkout ORIG_HEAD -- .gitmodules
           if ! git diff --quiet HEAD .gitmodules; then
             git add .gitmodules
             git commit --amend --no-edit
