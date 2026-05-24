@@ -265,6 +265,7 @@ jobs:
     env:
       BASH_ENV: /home/ko/.bashrc
       TARGET: android
+      ANDROID_ARCH: arm
     steps:
       - uses: actions/checkout@v4
         with:
@@ -302,6 +303,7 @@ jobs:
     env:
       BASH_ENV: /home/ko/.bashrc
       TARGET: android
+      ANDROID_ARCH: arm64
     steps:
       - uses: actions/checkout@v4
         with:
