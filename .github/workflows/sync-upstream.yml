@@ -2,7 +2,7 @@ name: Sync from upstream koreader
 
 on:
   schedule:
-    - cron: '0 2 * * 1'  # Every Monday at 02:00 UTC
+    - cron: '0 13 * * 5'  # Friday at 13:00 UTC (22:00 JST)
   workflow_dispatch:
 
 concurrency:
@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      issues: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v5
         with:
@@ -26,15 +26,26 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
 
-      - name: Merge from upstream koreader
+      - name: Fetch upstream
         run: |
           git remote add upstream https://github.com/koreader/koreader.git
           git fetch upstream master
 
-          # Merge upstream; abort and open issue on conflict
-          if ! git merge upstream/master --no-edit; then
+      - name: Merge from upstream koreader
+        run: |
+          if git merge upstream/master --no-edit; then
+            echo "MERGE_FAILED=false" >> $GITHUB_ENV
+          else
+            # Create a branch with the conflicted state for PR review
             git merge --abort
+            BRANCH="upstream-sync-$(date +%Y%m%d)"
+            git checkout -b "$BRANCH"
+            git merge upstream/master --no-edit || true
+            git add -A
+            git commit -m "WIP: upstream sync $(date +%Y-%m-%d) — conflicts need resolution"
+            git push origin "$BRANCH"
             echo "MERGE_FAILED=true" >> $GITHUB_ENV
+            echo "SYNC_BRANCH=$BRANCH" >> $GITHUB_ENV
           fi
 
       - name: Restore our .gitmodules (pin base to m-tky/koreader-base)
@@ -49,23 +60,22 @@ jobs:
       - name: Push
         if: env.MERGE_FAILED != 'true'
         run: |
-          # Re-fetch in case another run pushed while we were working,
-          # then rebase our merge commit on top before pushing.
           git fetch origin master
           if ! git merge-base --is-ancestor origin/master HEAD; then
             git rebase origin/master
           fi
           git push origin master
 
-      - name: Create issue on merge conflict
+      - name: Create PR on merge conflict
         if: env.MERGE_FAILED == 'true'
         uses: actions/github-script@v7
         with:
           script: |
-            await github.rest.issues.create({
+            await github.rest.pulls.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: 'Upstream sync failed: merge conflict',
-              body: 'Automatic sync from koreader/koreader failed due to a merge conflict. Manual resolution required.\n\nWorkflow run: ' + context.serverUrl + '/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.runId,
-              labels: ['upstream-sync'],
+              title: `Upstream sync ${new Date().toISOString().slice(0,10)}: conflicts need resolution`,
+              head: process.env.SYNC_BRANCH,
+              base: 'master',
+              body: `Automatic sync from koreader/koreader failed due to merge conflicts.\n\nThis PR contains the conflicted state — please resolve the markers and merge.\n\nWorkflow run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
             });
