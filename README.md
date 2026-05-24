@@ -77,6 +77,12 @@ The override is saved per-book and will not be overwritten on subsequent opens.
   groups and the following character. This is a property of the EPUB source, not a
   rendering bug.
 
+- **Some EPUBs show a double paragraph indent (two characters instead of one).**
+  This occurs when the EPUB uses a U+3000 ideographic space character (`　`) for
+  indentation while CREngine also applies its default `text-indent: 1.2em`. To fix
+  this for a specific book, go to the top menu → Aa → Style tweaks → Paragraph
+  first-line indentation → select **0** (no indent).
+
 - **Multi-line highlights have slightly jagged top/bottom edges** (a few pixels of
   variance between adjacent columns). This is a consequence of the underlying CREngine
   being designed for horizontal text only. Vertical-rl is retrofitted via a Y=X
