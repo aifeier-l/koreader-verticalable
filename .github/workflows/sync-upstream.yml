@@ -2,7 +2,7 @@ name: Sync from upstream koreader
 
 on:
   schedule:
-    - cron: '0 13 * * 5'  # Friday at 13:00 UTC (22:00 JST)
+    - cron: '0 9 * * 5'  # Friday at 09:00 UTC (18:00 JST)
   workflow_dispatch:
 
 concurrency:
