@@ -76,7 +76,7 @@ push_onto_remote_master() {
 
     # Cherry-pick each commit.
     for sha in $ahead; do
-        if ! git -C "$dir" cherry-pick -q "$sha"; then
+        if ! git -C "$dir" cherry-pick "$sha"; then
             git -C "$dir" cherry-pick --abort 2>/dev/null || true
             git -C "$dir" checkout -q -
             git -C "$dir" branch -D _push_tmp 2>/dev/null || true
