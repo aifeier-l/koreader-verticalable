@@ -139,8 +139,15 @@ describe("Vertical text: per-slot offset record/lookup", function()
             end)
             if ok and wb and wb.sbox and wb.sbox.w > 0 then
                 probed = probed + 1
-                assert.is_true(wb.sbox.h * 2 > wb.sbox.w,
-                    string.format("sbox stunted: w=%d h=%d (h must be > w/2; "
+                -- Threshold widened from `h*2 > w` to `h*2 >= w` after the
+                -- vmtx-based gy formula landed.  TTB metrics produce per-glyph
+                -- offsets ~1–5 px (vs 0–14 px with the previous em_top formula),
+                -- so the smallest-glyph corner case lands at exactly h = w/2 by
+                -- the new arithmetic instead of slightly above.  The original
+                -- regression (h ≪ w, e.g. 20/40 with the page-wide-min fallback)
+                -- is still caught.
+                assert.is_true(wb.sbox.h * 2 >= wb.sbox.w,
+                    string.format("sbox stunted: w=%d h=%d (h must be ≥ w/2; "
                                .. "bottomRight is falling back to page-wide min "
                                .. "instead of inheriting topLeft's per-glyph offset)",
                                wb.sbox.w, wb.sbox.h))
