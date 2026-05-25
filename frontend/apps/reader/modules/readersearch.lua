@@ -265,6 +265,9 @@ end
 
 function ReaderSearch:onShowFulltextSearchInput(search_string)
     local backward_text, forward_text = BD.getArrowLabels()
+    if self.view.inverse_reading_order then
+        backward_text, forward_text = forward_text, backward_text
+    end
     self.input_dialog = InputDialog:new{
         title = _("Enter text to search for"),
         width = math.floor(math.min(Screen:getWidth(), Screen:getHeight()) * 0.9),
@@ -469,6 +472,9 @@ function ReaderSearch:onShowSearchDialog(text, direction, regex, case_insensitiv
         end
     end
     local backward_text, forward_text, from_start_text, from_end_text = BD.getArrowLabels()
+    if self.view.inverse_reading_order then
+        backward_text, forward_text = forward_text, backward_text
+    end
     self.search_dialog = ButtonDialog:new{
         -- alpha = 0.7,
         buttons = {
@@ -813,7 +819,11 @@ function ReaderSearch:gotoResultsItem(index)
 
     local chevron_left = "chevron.left"
     local chevron_right = "chevron.right"
-    if BD.mirroredUILayout() then
+    local swap_chevrons = BD.mirroredUILayout()
+    if self.view.inverse_reading_order then
+        swap_chevrons = not swap_chevrons
+    end
+    if swap_chevrons then
         chevron_left, chevron_right = chevron_right, chevron_left
     end
     local dialog
