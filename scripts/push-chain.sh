@@ -75,12 +75,62 @@ push_onto_remote_master() {
     git -C "$dir" checkout -q -b _push_tmp "$remote_tip"
 
     # Cherry-pick each commit.
+    # On conflict, auto-resolve if every conflicted file is a submodule pointer
+    # (mode 160000) — the sub_sha fixup below will set the correct pointer anyway.
+    # Skip commits that become empty (already applied upstream).
     for sha in $ahead; do
-        if ! git -C "$dir" cherry-pick "$sha"; then
+        if git -C "$dir" cherry-pick "$sha" 2>/dev/null; then
+            continue
+        fi
+
+        local -a conflicts non_submod
+        mapfile -t conflicts < <(git -C "$dir" diff --name-only --diff-filter=U 2>/dev/null)
+
+        if [[ ${#conflicts[@]} -eq 0 ]]; then
+            # No unmerged files — commit is empty (content already on remote).
+            git -C "$dir" cherry-pick --skip 2>/dev/null || true
+            warn "  skipped already-applied commit $sha"
+            continue
+        fi
+
+        non_submod=()
+        for f in "${conflicts[@]}"; do
+            local mode
+            mode=$(git -C "$dir" ls-files --stage -- "$f" 2>/dev/null | awk 'NR==1{print $1}')
+            if [[ "$mode" == "160000" ]]; then
+                # Submodule pointer conflict: keep HEAD version (fixed later).
+                git -C "$dir" checkout HEAD -- "$f"
+                git -C "$dir" add -- "$f"
+            else
+                non_submod+=("$f")
+            fi
+        done
+
+        if [[ ${#non_submod[@]} -gt 0 ]]; then
             git -C "$dir" cherry-pick --abort 2>/dev/null || true
             git -C "$dir" checkout -q -
             git -C "$dir" branch -D _push_tmp 2>/dev/null || true
-            die "Cherry-pick of $sha failed. Resolve manually."
+            die "Cherry-pick of $sha failed (non-submodule conflicts). Resolve manually."
+        fi
+
+        warn "  submodule conflict in $sha auto-resolved (pointer updated after loop)"
+        if ! git -C "$dir" cherry-pick --continue --no-edit 2>/dev/null; then
+            # Check if the commit is now empty (all changes already on remote).
+            # Use git rev-parse --git-dir because .git may be a file pointing
+            # elsewhere (e.g. submodule worktrees stored in ../.git/modules/).
+            local git_dir still_conflicted
+            git_dir=$(git -C "$dir" rev-parse --git-dir)
+            [[ "$git_dir" != /* ]] && git_dir="$dir/$git_dir"
+            mapfile -t still_conflicted < <(git -C "$dir" diff --name-only --diff-filter=U 2>/dev/null)
+            if [[ ${#still_conflicted[@]} -eq 0 && -f "$git_dir/CHERRY_PICK_HEAD" ]]; then
+                git -C "$dir" cherry-pick --skip 2>/dev/null || true
+                warn "  commit $sha became empty after auto-resolve — skipped"
+            else
+                git -C "$dir" cherry-pick --abort 2>/dev/null || true
+                git -C "$dir" checkout -q -
+                git -C "$dir" branch -D _push_tmp 2>/dev/null || true
+                die "Cherry-pick of $sha failed after auto-resolve. Resolve manually."
+            fi
         fi
     done
 
