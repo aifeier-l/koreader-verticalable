@@ -22,12 +22,14 @@ local ota_dir = DataStorage:getDataDir() .. "/ota/"
 
 local OTAManager = {
     -- NOTE: Each URL *MUST* end with a /
-    -- Use m-tky/koreader-tategumi GitHub Releases as the OTA source.
+    -- Keyed by channel name; getOTAServer() auto-selects based on getOTAChannel().
     ota_servers = {
-        "https://github.com/m-tky/koreader-tategumi/releases/latest/download/",
+        stable  = "https://github.com/m-tky/koreader-tategumi/releases/latest/download/",
+        nightly = "https://github.com/m-tky/koreader-tategumi/releases/download/nightly/",
     },
     ota_channels = {
         "stable",
+        "nightly",
     },
     link_template = "koreader-%s-latest-%s",
     zsync_template = "koreader-%s-latest-%s.zsync",
@@ -49,12 +51,8 @@ function OTAManager:getOTAType()
 end
 
 function OTAManager:getOTAServer()
-    return G_reader_settings:readSetting("ota_server") or self.ota_servers[1]
-end
-
-function OTAManager:setOTAServer(server)
-    logger.dbg("Set OTA server:", server)
-    G_reader_settings:saveSetting("ota_server", server)
+    local channel = self:getOTAChannel()
+    return self.ota_servers[channel] or self.ota_servers.stable
 end
 
 function OTAManager:getOTAChannel()
@@ -373,19 +371,6 @@ function OTAManager:zsync(full_dl)
     end
 end
 
-function OTAManager:genServerList()
-    local servers = {}
-    for _, server in ipairs(self.ota_servers) do
-        local server_item = {
-            text = server,
-            checked_func = function() return self:getOTAServer() == server end,
-            callback = function() self:setOTAServer(server) end
-        }
-        table.insert(servers, server_item)
-    end
-    return servers
-end
-
 function OTAManager:genChannelList()
     local channels = {}
     for _, channel in ipairs(self.ota_channels) do
@@ -431,10 +416,6 @@ function OTAManager:getOTAMenuTable()
             {
                 text = _("Settings"),
                 sub_item_table = {
-                    {
-                        text = _("Update server"),
-                        sub_item_table = self:genServerList()
-                    },
                     {
                         text = _("Update channel"),
                         sub_item_table = self:genChannelList()

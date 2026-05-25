@@ -1,0 +1,418 @@
+name: Nightly builds
+
+on:
+  schedule:
+    - cron: '0 20 * * *'   # 05:00 JST daily
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  MAKEFLAGS: "PARALLEL_JOBS=3 OUTPUT_DIR=build"
+  # OTA base URL for nightly zsync — points to the 'nightly' tagged release.
+  # (Cannot use /releases/latest because nightly is a prerelease.)
+  OTA_BASE_URL: "https://github.com/m-tky/koreader-tategumi/releases/download/nightly"
+
+jobs:
+
+  kindle:
+    name: Kindle
+    runs-on: ubuntu-latest
+    container:
+      image: koreader/kokindle:latest
+    env:
+      BASH_ENV: /home/ko/.bashrc
+      TARGET: kindle
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch submodules
+        run: make fetchthirdparty
+      - name: Build
+        run: make TARGET=kindle
+      - name: Package
+        run: make TARGET=kindle update
+      - name: Rename for nightly
+        run: |
+          cp koreader-kindle-*.zip koreader-kindle-latest-nightly.zip || true
+          cp koreader-kindle-*.targz koreader-kindle-latest-nightly.targz || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kindle
+          path: |
+            koreader-kindle-latest-nightly.zip
+            koreader-kindle-latest-nightly.targz
+
+  kindlehf:
+    name: Kindle (HF)
+    runs-on: ubuntu-latest
+    container:
+      image: koreader/kokindle:latest
+    env:
+      BASH_ENV: /home/ko/.bashrc
+      TARGET: kindlehf
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch submodules
+        run: make fetchthirdparty
+      - name: Build
+        run: make TARGET=kindlehf
+      - name: Package
+        run: make TARGET=kindlehf update
+      - name: Rename for nightly
+        run: |
+          cp koreader-kindlehf-*.zip koreader-kindlehf-latest-nightly.zip || true
+          cp koreader-kindlehf-*.targz koreader-kindlehf-latest-nightly.targz || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kindlehf
+          path: |
+            koreader-kindlehf-latest-nightly.zip
+            koreader-kindlehf-latest-nightly.targz
+
+  kindlepw2:
+    name: Kindle (PW2/non-HF)
+    runs-on: ubuntu-latest
+    container:
+      image: koreader/kokindle:latest
+    env:
+      BASH_ENV: /home/ko/.bashrc
+      TARGET: kindlepw2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch submodules
+        run: make fetchthirdparty
+      - name: Build
+        run: make TARGET=kindlepw2
+      - name: Package
+        run: make TARGET=kindlepw2 update
+      - name: Rename for nightly
+        run: |
+          cp koreader-kindlepw2-*.zip koreader-kindlepw2-latest-nightly.zip || true
+          cp koreader-kindlepw2-*.targz koreader-kindlepw2-latest-nightly.targz || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kindlepw2
+          path: |
+            koreader-kindlepw2-latest-nightly.zip
+            koreader-kindlepw2-latest-nightly.targz
+
+  kobo:
+    name: Kobo
+    runs-on: ubuntu-latest
+    container:
+      image: koreader/kokobo:latest
+    env:
+      BASH_ENV: /home/ko/.bashrc
+      TARGET: kobo
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch submodules
+        run: make fetchthirdparty
+      - name: Build
+        run: make TARGET=kobo
+      - name: Package
+        run: make TARGET=kobo update
+      - name: Rename for nightly
+        run: |
+          cp koreader-kobo-*.zip koreader-kobo-latest-nightly.zip || true
+          cp koreader-kobo-*.targz koreader-kobo-latest-nightly.targz || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kobo
+          path: |
+            koreader-kobo-latest-nightly.zip
+            koreader-kobo-latest-nightly.targz
+
+  pocketbook:
+    name: PocketBook
+    runs-on: ubuntu-latest
+    container:
+      image: koreader/kopb:latest
+    env:
+      BASH_ENV: /home/ko/.bashrc
+      TARGET: pocketbook
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch submodules
+        run: make fetchthirdparty
+      - name: Build
+        run: make TARGET=pocketbook
+      - name: Package
+        run: make TARGET=pocketbook update
+      - name: Rename for nightly
+        run: |
+          cp koreader-pocketbook-*.zip koreader-pocketbook-latest-nightly.zip || true
+          cp koreader-pocketbook-*.targz koreader-pocketbook-latest-nightly.targz || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pocketbook
+          path: |
+            koreader-pocketbook-latest-nightly.zip
+            koreader-pocketbook-latest-nightly.targz
+
+  cervantes:
+    name: Cervantes
+    runs-on: ubuntu-latest
+    container:
+      image: koreader/kocervantes:latest
+    env:
+      BASH_ENV: /home/ko/.bashrc
+      TARGET: cervantes
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch submodules
+        run: make fetchthirdparty
+      - name: Build
+        run: make TARGET=cervantes
+      - name: Package
+        run: make TARGET=cervantes update
+      - name: Rename for nightly
+        run: |
+          cp koreader-cervantes-*.zip koreader-cervantes-latest-nightly.zip || true
+          cp koreader-cervantes-*.targz koreader-cervantes-latest-nightly.targz || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cervantes
+          path: |
+            koreader-cervantes-latest-nightly.zip
+            koreader-cervantes-latest-nightly.targz
+
+  remarkable:
+    name: reMarkable (armhf)
+    runs-on: ubuntu-latest
+    container:
+      image: koreader/koremarkable:latest
+    env:
+      BASH_ENV: /home/ko/.bashrc
+      TARGET: remarkable
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch submodules
+        run: make fetchthirdparty
+      - name: Build
+        run: make TARGET=remarkable
+      - name: Package
+        run: make TARGET=remarkable update
+      - name: Rename for nightly
+        run: |
+          cp koreader-remarkable-*.zip koreader-remarkable-latest-nightly.zip || true
+          cp koreader-remarkable-*.targz koreader-remarkable-latest-nightly.targz || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: remarkable
+          path: |
+            koreader-remarkable-latest-nightly.zip
+            koreader-remarkable-latest-nightly.targz
+
+  remarkable-aarch64:
+    name: reMarkable (aarch64)
+    runs-on: ubuntu-latest
+    container:
+      image: koreader/koremarkable:latest
+    env:
+      BASH_ENV: /home/ko/.bashrc
+      TARGET: remarkable-aarch64
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch submodules
+        run: make fetchthirdparty
+      - name: Build
+        run: make TARGET=remarkable-aarch64
+      - name: Package
+        run: make TARGET=remarkable-aarch64 update
+      - name: Rename for nightly
+        run: |
+          cp koreader-remarkable-aarch64-*.zip koreader-remarkable-aarch64-latest-nightly.zip || true
+          cp koreader-remarkable-aarch64-*.targz koreader-remarkable-aarch64-latest-nightly.targz || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: remarkable-aarch64
+          path: |
+            koreader-remarkable-aarch64-latest-nightly.zip
+            koreader-remarkable-aarch64-latest-nightly.targz
+
+  android-arm:
+    name: Android (ARM)
+    runs-on: ubuntu-latest
+    container:
+      image: koreader/koandroid:latest
+    env:
+      BASH_ENV: /home/ko/.bashrc
+      TARGET: android
+      ANDROID_ARCH: arm
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch submodules
+        run: make fetchthirdparty
+      - name: Build
+        run: make TARGET=android
+      - name: Package
+        run: make TARGET=android update
+      - name: Sign APK
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > /tmp/release.keystore
+          APKSIGNER=$(find "${ANDROID_HOME}/build-tools" -name apksigner | sort -V | tail -1)
+          "${APKSIGNER}" sign \
+            --ks /tmp/release.keystore \
+            --ks-pass "pass:${{ secrets.ANDROID_STORE_PASSWORD }}" \
+            --key-pass "pass:${{ secrets.ANDROID_KEY_PASSWORD }}" \
+            --ks-key-alias "${{ secrets.ANDROID_KEY_ALIAS }}" \
+            koreader-android-*.apk
+          rm -f /tmp/release.keystore
+      - name: Rename for nightly
+        run: cp koreader-android-*.apk koreader-android-latest-nightly.apk 2>/dev/null || \
+             cp koreader-android-*.zip koreader-android-latest-nightly.zip 2>/dev/null || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-arm
+          path: koreader-android-latest-nightly.*
+
+  android-arm64:
+    name: Android (ARM64)
+    runs-on: ubuntu-latest
+    container:
+      image: koreader/koandroid:latest
+    env:
+      BASH_ENV: /home/ko/.bashrc
+      TARGET: android
+      ANDROID_ARCH: arm64
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch submodules
+        run: make fetchthirdparty
+      - name: Build
+        run: make TARGET=android ANDROID_ARCH=arm64
+      - name: Package
+        run: make TARGET=android ANDROID_ARCH=arm64 update
+      - name: Sign APK
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > /tmp/release.keystore
+          APKSIGNER=$(find "${ANDROID_HOME}/build-tools" -name apksigner | sort -V | tail -1)
+          "${APKSIGNER}" sign \
+            --ks /tmp/release.keystore \
+            --ks-pass "pass:${{ secrets.ANDROID_STORE_PASSWORD }}" \
+            --key-pass "pass:${{ secrets.ANDROID_KEY_PASSWORD }}" \
+            --ks-key-alias "${{ secrets.ANDROID_KEY_ALIAS }}" \
+            koreader-android-arm64-*.apk
+          rm -f /tmp/release.keystore
+      - name: Rename for nightly
+        run: cp koreader-android-arm64-*.apk koreader-android-arm64-latest-nightly.apk || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-arm64
+          path: koreader-android-arm64-latest-nightly.apk
+
+  publish:
+    name: Publish Nightly
+    needs: [kindle, kindlehf, kindlepw2, kobo, pocketbook, cervantes, remarkable, remarkable-aarch64, android-arm, android-arm64]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set nightly version (YYYY.MM.DD)
+        run: echo "NIGHTLY_VERSION=v$(date -u +%Y.%m.%d)" >> $GITHUB_ENV
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Create OTA aliases and versioned copies
+        run: |
+          VER=$NIGHTLY_VERSION
+          # kobov5: same binary as kobo
+          cp artifacts/kobo/koreader-kobo-latest-nightly.zip \
+             artifacts/kobo/koreader-kobov5-latest-nightly.zip
+          cp artifacts/kobo/koreader-kobo-latest-nightly.targz \
+             artifacts/kobo/koreader-kobov5-latest-nightly.targz
+          # kindle-legacy: same binary as kindle
+          cp artifacts/kindle/koreader-kindle-latest-nightly.zip \
+             artifacts/kindle/koreader-kindle-legacy-latest-nightly.zip
+          cp artifacts/kindle/koreader-kindle-latest-nightly.targz \
+             artifacts/kindle/koreader-kindle-legacy-latest-nightly.targz
+          # Versioned copies of all zip/targz files
+          for f in artifacts/**/*-latest-nightly.zip artifacts/**/*-latest-nightly.targz; do
+            cp "$f" "${f/latest-nightly/$VER}"
+          done
+          # Versioned APK copies
+          for f in artifacts/**/*-latest-nightly.apk; do
+            cp "$f" "${f/latest-nightly/$VER}" 2>/dev/null || true
+          done
+          # Android "link" type OTA index files (first line = APK filename to download)
+          echo "koreader-android-arm64-$VER.apk" \
+            > artifacts/android-arm64/koreader-android-arm64-latest-nightly
+          echo "koreader-android-$VER.apk" \
+            > artifacts/android-arm/koreader-android-latest-nightly
+
+      - name: Generate zsync files
+        run: |
+          # zsync Filename header = versioned name → parsed for version comparison.
+          # zsync URL header = latest-nightly.targz → always downloadable at fixed URL.
+          sudo apt-get update -qq && sudo apt-get install -y zsync
+          VER=$NIGHTLY_VERSION
+          shopt -s globstar
+          for f in artifacts/**/*-"$VER".targz; do
+            name=$(basename "$f")
+            nightly_name="${name/$VER/latest-nightly}"
+            dir=$(dirname "$f")
+            zsyncmake -u "$OTA_BASE_URL/$nightly_name" \
+              -o "$dir/${nightly_name%.targz}.zsync" \
+              "$f"
+          done
+          # Versioned zsync copies
+          for f in artifacts/**/*-latest-nightly.zsync; do
+            cp "$f" "${f/latest-nightly/$VER}"
+          done
+
+      - name: List artifacts
+        run: find artifacts/ -type f | sort
+
+      - name: Delete previous nightly release and tag
+        run: |
+          gh release delete nightly --cleanup-tag --yes 2>/dev/null || true
+          sleep 3
+
+      - name: Create nightly release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: nightly
+          name: "koreader-tategumi nightly (${{ env.NIGHTLY_VERSION }})"
+          prerelease: true
+          make_latest: false
+          body: |
+            Automatic nightly build — ${{ env.NIGHTLY_VERSION }} — commit [${{ github.sha }}](https://github.com/m-tky/koreader-tategumi/commit/${{ github.sha }})
+
+            To enable nightly OTA updates, open KOReader and go to:
+            **Menu → Update → Settings → Update channel → Development**
+          files: artifacts/**/*
