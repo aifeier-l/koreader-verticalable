@@ -263,7 +263,7 @@ base/                                           crengine submodule
     include/lvlogical.h                         CSS logical property index helpers
     src/lvrend.cpp                              Block rendering, FlowState
     src/lvtextfm_layout_h.cpp                   Text formatter draw & layout
-    src/lvtextfm_layout_v.cpp                   Vertical paragraph layout
+    src/lvtextfm_vert.cpp                       Vertical paragraph layout (fork-only)
     src/lvtextfm.cpp                            measureText, ruby inline box
     src/lvdocview.cpp                           windowToDocPoint, docToWindowPoint, isVerticalText
     src/lvfntman.cpp                            HarfBuzz font shaping, +vert features, glyph rotation
@@ -287,6 +287,28 @@ koreader-tategumi  (github.com/m-tky/koreader-tategumi)
 ```
 
 ### Workflow for crengine changes
+
+Use `scripts/push-chain.sh` to push commits through the chain automatically:
+
+```bash
+# Push crengine → base → koreader (full chain)
+./scripts/push-chain.sh
+
+# Push from base upward (crengine already pushed)
+./scripts/push-chain.sh base
+
+# Push koreader only
+./scripts/push-chain.sh koreader
+
+# Preview what would be pushed without doing anything
+./scripts/push-chain.sh --dry-run
+```
+
+The script handles detached HEAD and diverged branches by cherry-picking onto
+`mytky/master`, and automatically fixes stale submodule SHAs (the common failure
+mode where a local commit SHA appears in a submodule pointer but was never pushed).
+
+Manual equivalent (if needed):
 
 ```bash
 # 1. Commit in crengine, push to m-tky/crengine
@@ -313,7 +335,7 @@ git tag -a vYYYY.MM.P -m "..." && git push origin vYYYY.MM.P
 
 Both `base` and `crengine` are often in detached HEAD state.
 Commits made in detached HEAD are NOT on any remote branch.
-Always cherry-pick onto the tracked branch (`mytky/master`) before pushing:
+`push-chain.sh` handles this automatically. Manually:
 
 ```bash
 git checkout mytky/master -b tmp-push
