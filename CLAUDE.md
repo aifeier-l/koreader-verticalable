@@ -101,7 +101,7 @@ margin_top   = style->margin[L.marBS()];    // margin-right → block-start
 This replaces hard-coded physical indices (0,1,2,3) throughout `renderBlockElementEnhanced`
 and `DrawDocument`, ensuring CSS padding/margin are applied in the correct directions.
 
-### Formatted text draw (lvtextfm_layout_h.cpp `LFormattedText::Draw`)
+### Formatted text draw (lvtextfm.cpp `LFormattedText::Draw`)
 
 #### Entry and page-level call
 
@@ -194,7 +194,7 @@ advance = max(base_horiz_advance_pre, annot_depth);
 Also: `vert_layout_min_x` (post-layout pass) applied `eff_w = max(word->width, font_size)`
 to all words including spaces. For a U+0020 before an inline box this inflated
 `ib_word_x` by `font_size − space_advance`, creating a gap above the box. Fix
-(lvtextfm_layout_h.cpp `alignLineHorizontal`): apply the font_size minimum only
+(lvtextfm.cpp `alignLineHorizontal`): apply the font_size minimum only
 for CJK words (where compressed punctuation needs it).
 
 ```cpp
@@ -241,9 +241,9 @@ bool LVDocView::isVerticalText() const {
 | Strikeout highlight: vertical line through column center | `readerview.lua` |
 | Vertical footer: progress bar fills right→left, TOC ticks mirrored | `readerfooter.lua` |
 | Glyph rotation: ー 〜 … 、。括弧類 etc. use vertical forms (`vert`/`vrt2`) | `lvfntman.cpp` |
-| Column bottom clipping fix: glyphs at column end no longer clipped | `lvtextfm_layout_h.cpp` |
+| Column bottom clipping fix: glyphs at column end no longer clipped | `lvtextfm.cpp` |
 | sbox screen_y offset (P5): `windowToDocPoint`/`docToWindowPoint` account for `clip.top` | `lvdocview.cpp` |
-| Character overlap fix (上にめり込む): `vert_min_next_x` correctly prevents overlap | `lvtextfm_layout_h.cpp` |
+| Character overlap fix (上にめり込む): `vert_min_next_x` correctly prevents overlap | `lvtextfm.cpp` |
 
 **Note on whitespace**: some EPUBs have U+0020 spaces adjacent to ruby groups (e.g. `と Nachbild《…》 という`). These render as narrow gaps proportional to the space glyph's advance width (≈ ¼ em). This is expected — the space is in the EPUB source.
 
@@ -262,7 +262,6 @@ base/                                           crengine submodule
   thirdparty/kpvcrlib/crengine/crengine/
     include/lvlogical.h                         CSS logical property index helpers
     src/lvrend.cpp                              Block rendering, FlowState
-    src/lvtextfm_layout_h.cpp                   Text formatter draw & layout
     src/lvtextfm_vert.cpp                       Vertical paragraph layout (fork-only)
     src/lvtextfm.cpp                            measureText, ruby inline box
     src/lvdocview.cpp                           windowToDocPoint, docToWindowPoint, isVerticalText
