@@ -82,7 +82,7 @@ reinstalling from scratch:
 
 If you find this vertical text fork useful, you can support its development:
 
-[![Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/mtkydev)
+[![GitHub Sponsors](https://img.shields.io/github/sponsors/m-tky?label=Sponsor&logo=GitHub&style=for-the-badge)](https://github.com/sponsors/m-tky)
 
 For the upstream KOReader project itself, please see
 [koreader/koreader](https://github.com/koreader/koreader).
