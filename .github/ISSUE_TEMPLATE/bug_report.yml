@@ -6,8 +6,13 @@ body:
       value: |
         Thanks for reporting! This fork focuses on Japanese vertical text (縦書き / tategumi).
 
-        **Note:** Many display issues are caused by font limitations (missing OpenType `vert`/`vrt2` features)
-        rather than rendering bugs. Please read each field carefully before submitting.
+        **Common non-bugs — please check first:**
+        - **Display / glyph orientation** issues are often caused by font limitations
+          (missing OpenType `vert`/`vrt2` features), not rendering bugs.
+        - **Third-party plugin breakage** that also occurs with upstream KOReader
+          nightly (master) is out of scope — please report to the plugin's author.
+
+        Please read each field carefully before submitting.
 
   - type: checkboxes
     id: preflight-checks
@@ -24,8 +29,8 @@ body:
             For display / glyph issues: I tried with a different font and the problem persists.
           required: false
         - label: >-
-            For third-party plugin issues: I confirmed the plugin works with upstream KOReader
-            nightly (master). Plugin breakage that also occurs upstream is out of scope for this fork.
+            For third-party plugin issues (required if applicable): I confirmed the plugin
+            works with upstream KOReader nightly (master).
           required: false
 
   - type: input
@@ -62,11 +67,12 @@ body:
     attributes:
       label: Font name
       description: >-
-        Which font are you using? Vertical text requires a font with OpenType `vert`/`vrt2`
-        features for correct glyph orientation (punctuation, brackets, etc.).
+        Which font are you using? Required for display / glyph issues; leave blank otherwise.
+        Vertical text requires a font with OpenType `vert`/`vrt2` features for correct
+        glyph orientation (punctuation, brackets, etc.).
       placeholder: "e.g., Noto Serif CJK JP, IPAMincho, (KOReader built-in)"
     validations:
-      required: true
+      required: false
 
   - type: dropdown
     id: writing-mode-setup
@@ -85,10 +91,10 @@ body:
       label: EPUB title and source
       description: >-
         Which book triggers the issue? If it is freely available (e.g., Aozora Bunko),
-        please include the URL so it can be reproduced.
+        please include the URL so it can be reproduced. Write "N/A" if not book-specific.
       placeholder: "e.g., 三四郎 — https://www.aozora.gr.jp/..."
     validations:
-      required: false
+      required: true
 
   - type: textarea
     id: issue-description
@@ -96,8 +102,8 @@ body:
       label: Issue description
       description: Describe what is wrong and what you expected. Screenshots are very helpful.
       placeholder: |
-        Expected: 。appears upright in the column.
-        Actual:   。appears rotated sideways.
+        Expected: <what should happen>
+        Actual:   <what actually happens>
     validations:
       required: true
 
