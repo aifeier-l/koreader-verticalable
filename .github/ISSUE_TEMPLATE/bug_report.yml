@@ -18,10 +18,14 @@ body:
           required: true
         - label: >-
             This issue is specific to vertical text — it does not occur with horizontal
-            text in upstream KOReader.
+            text in upstream KOReader nightly (master).
           required: true
         - label: >-
             For display / glyph issues: I tried with a different font and the problem persists.
+          required: false
+        - label: >-
+            For third-party plugin issues: I confirmed the plugin works with upstream KOReader
+            nightly (master). Plugin breakage that also occurs upstream is out of scope for this fork.
           required: false
 
   - type: input
