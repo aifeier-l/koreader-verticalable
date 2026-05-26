@@ -17,8 +17,10 @@ CRENGINE_DIR="$ROOT/base/thirdparty/kpvcrlib/crengine"
 BASE_DIR="$ROOT/base"
 
 GRN='\033[0;32m'; YLW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
-info()  { echo -e "${GRN}▶${NC} $*"; }
-warn()  { echo -e "${YLW}⚠${NC} $*"; }
+# All status messages go to stderr so that the captured stdout from
+# push_onto_remote_master() contains only the resulting SHA.
+info()  { echo -e "${GRN}▶${NC} $*" >&2; }
+warn()  { echo -e "${YLW}⚠${NC} $*" >&2; }
 die()   { echo -e "${RED}✗${NC} $*" >&2; exit 1; }
 
 DRY=false
