@@ -68,6 +68,15 @@ This fork tracks upstream KOReader master, so its base is equivalent to upstream
 verify it also fails with vanilla upstream KOReader nightly before filing an issue
 here — plugin breakage that also occurs upstream is out of scope for this fork.
 
+### Plugins with vertical-rl support
+
+The following plugins have soft-forks tuned for this fork's vertical-rl mode:
+
+- **Bookends** ([m-tky/bookends.koplugin](https://github.com/m-tky/bookends.koplugin)) —
+  configurable text overlays. Forked from
+  [AndyHazz/bookends.koplugin](https://github.com/AndyHazz/bookends.koplugin) with
+  vertical-rl auto-detection so progress bars fill right→left in tategumi documents.
+
 ## Advanced: switching from vanilla KOReader
 
 If you already have vanilla KOReader installed, you can switch to this fork without
