@@ -83,16 +83,6 @@ The override is saved per-book and will not be overwritten on subsequent opens.
   this for a specific book, go to the top menu → Aa → Style tweaks → Paragraph
   first-line indentation → select **0** (no indent).
 
-- **Multi-line highlights have slightly jagged top/bottom edges** (a few pixels of
-  variance between adjacent columns). This is a consequence of the underlying CREngine
-  being designed for horizontal text only. Vertical-rl is retrofitted via a Y=X
-  coordinate swap, which reuses the horizontal rendering pipeline but causes per-glyph
-  Y offsets (necessary to align individual highlights with their rendered glyphs in a
-  column-width slot) to leak into what would otherwise be line-level uniform values.
-  A proper fix would require writing-mode-aware logical-direction abstraction at the
-  layout-engine level — out of scope for this soft fork. Individual character highlights
-  remain pixel-accurate.
-
 ## Support
 
 If you find this vertical text fork useful, you can support its development:
