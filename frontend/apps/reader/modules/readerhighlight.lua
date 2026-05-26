@@ -1854,12 +1854,8 @@ function ReaderHighlight:onHoldPan(_, ges)
     self.holdpan_pos = self.view:screenToPageTransform(ges.pos)
     logger.dbg("holdpan position in page", self.holdpan_pos)
 
-    -- In vertical-rl, the natural large-selection endpoint (bottom-left = last column)
-    -- coincides with the "next page" corner when inverse_reading_order is set.
-    -- Disable corner-scroll for vertical text to avoid cancelling the selection.
     local is_vertical = self.ui.document.isVerticalText and self.ui.document:isVerticalText()
-    if self.ui.rolling and self.allow_corner_scroll and self.selected_text_start_xpointer
-            and not is_vertical then
+    if self.ui.rolling and self.allow_corner_scroll and self.selected_text_start_xpointer then
         -- With CreDocuments, allow text selection across multiple pages
         -- by (temporarily) switching to scroll mode when panning to the
         -- top left or bottom right corners.
@@ -1868,7 +1864,18 @@ function ReaderHighlight:onHoldPan(_, ges)
             mirrored_reading = not mirrored_reading
         end
         local is_in_prev_page_corner, is_in_next_page_corner
-        if mirrored_reading then
+        if is_vertical then
+            -- Vertical-rl: natural selection endpoints are top-right (page
+            -- start) and bottom-left (page end = last column).  Using those
+            -- as scroll corners would cancel large selections, so we pick the
+            -- two opposite corners instead: top-left → next page, bottom-right
+            -- → prev page.  The user pans to a corner that is NOT on the
+            -- natural reading path to trigger a page switch.
+            is_in_next_page_corner = self.holdpan_pos.y < 1/8*self.screen_h
+                                      and self.holdpan_pos.x < 1/8*self.screen_w
+            is_in_prev_page_corner = self.holdpan_pos.y > 7/8*self.screen_h
+                                      and self.holdpan_pos.x > 7/8*self.screen_w
+        elseif mirrored_reading then
             -- Note: this might not be really usable, as crengine native selection
             -- is not adapted to RTL text
             -- top right corner
@@ -1914,7 +1921,10 @@ function ReaderHighlight:onHoldPan(_, ges)
                     self.ui:handleEvent(Event:new("SetViewMode", "scroll"))
                 end
                 -- (using rolling:onGotoViewRel(1/3) has some strange side effects)
-                local scroll_distance = math.floor(self.screen_h * 1/3)
+                -- In vertical-rl, the document Y axis is column progression
+                -- (perpendicular to screen_h), so scroll along screen_w instead.
+                local scroll_axis = is_vertical and self.screen_w or self.screen_h
+                local scroll_distance = math.floor(scroll_axis * 1/3)
                 local move_y = is_in_next_page_corner and scroll_distance or -scroll_distance
                 self.ui.rolling:_gotoPos(self.ui.document:getCurrentPos() + move_y)
                 local new_y = self.ui.document:getScreenPositionFromXPointer(self.selected_text_start_xpointer)
