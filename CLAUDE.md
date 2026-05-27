@@ -202,6 +202,64 @@ bool is_cjk = (wi->flags & (LTEXT_WORD_IS_CJK | LTEXT_WORD_IS_FLEXIBLE_WIDTH_CJK
 int eff_w = (is_cjk && (int)wi->width < font_sz) ? font_sz : (int)wi->width;
 ```
 
+### Glyph placement in vertical mode (lvfntman.cpp)
+
+HarfBuzz is shaped with `HB_DIRECTION_TTB` so `y_advance` carries the vertical advance.
+Glyph (gx, gy) is then computed by **character class**, not blindly from font vmtx — this
+matches what mainstream typesetting systems do (JLReq central-baseline model, CSS Writing
+Modes 3, Chromium/WebKit, InDesign, pTeX/LuaTeX-ja JFM).
+
+The verification (`/tmp/ttb_verify5.py`) compared raw HarfBuzz TTB output, FreeType vmtx
+and the fork's positioning across Noto Serif JP and Hiragino Mincho Pro:
+
+- HB returns a **constant** `(x_offset, y_offset) = (-_size/2, -ascender)` for every CJK
+  glyph at a given size — the per-glyph spread comes from `bitmap_left/top` (FT) or vBX/vBY
+  (vmtx), not from HB itself.
+- Noto/Hiragino's CJK vBY varies 0–4 px and vBX varies 5–9 px per glyph at 24 px.  Naïve
+  vmtx placement makes this variation visible as column "ガタガタ".  The OpenType vmtx
+  spec's design intent is uniform tsb across ideographs; the residual variation is
+  generated noise.
+
+Three placement classes (lvfntman_vert.{h,cpp}):
+
+1. **Body CJK** — `isUniformVerticalIdeograph(c)`: ideographs, hiragana, katakana,
+   Hangul, bopomofo (excluding ー = 0x30FC, handled as vert mark).
+   X uses vmtx vBX to put the **optical** centre on the column axis (matches what the
+   font designer encoded — for asymmetric glyphs like し ら っ where ink leans within
+   the bitmap rect, vBX corrects the rect-centre/ink-centre mismatch that pure
+   bitmap-X-centring would leave visible).  Y uses bitmap-centring on the slot's
+   vertical centre (JLReq virtual body Y centre, uniform across glyphs):
+   ```cpp
+   int col_center = x + _size / 2;
+   gx = col_center + vm.origin_x;        // vertBearingX, font's optical centre
+   gy = y + (_size - bmp_height) / 2;    // virtual body Y centre
+   ```
+   Fallback (no vhea): bitmap-centre X.
+
+2. **Vertical marks** — `LFNT_HINT_VERTICAL_MARK` for ー — ‥ … 〜 ～ ―:
+   Bitmap-centred on BOTH X and Y.  Centring on bitmap_width rather than vBX makes
+   the position font-independent (Hiragino-style fonts leave +vert form vBX at 0,
+   which would left-align; Noto's vBX centres correctly — bitmap-centring works in
+   both cases):
+   ```cpp
+   gx = x + (_size - bmp_width) / 2;
+   gy = y + (_size - bmp_height) / 2;
+   ```
+
+3. **Punctuation, brackets, other** (fall-through): vmtx-based, since their in-slot
+   position IS by design (、。 hang at the bottom-right of the virtual body per
+   JLReq 行末半角詰め, brackets follow corner conventions):
+   ```cpp
+   int col_center = x + _size / 2;
+   gx = col_center + vm.origin_x;   // vertBearingX
+   gy = y + vm.origin_y;            // vertBearingY
+   ```
+
+HarfBuzz TTB writes `x_offset = -vertOriginX`, `y_offset = -vertOriginY` into
+`glyph_pos[]` (compensation for an LTR-style pen).  The fork places the pen at the
+vertical origin directly and reads vBX/vBY from its own cache, so HarfBuzz's offsets
+must NOT be added on top — that would double-displace the glyph.
+
 ### Coordinate conversion (lvdocview.cpp, cre.cpp)
 
 `windowToDocPoint` (screen → doc):
@@ -241,6 +299,7 @@ bool LVDocView::isVerticalText() const {
 | Strikeout highlight: vertical line through column center | `readerview.lua` |
 | Vertical footer: progress bar fills right→left, TOC ticks mirrored | `readerfooter.lua` |
 | Glyph rotation: ー 〜 … 、。括弧類 etc. use vertical forms (`vert`/`vrt2`) | `lvfntman.cpp` |
+| Central-baseline glyph placement (JLReq): body CJK uniform, vert marks centred, punctuation/brackets from vmtx | `lvfntman.cpp`, `lvfntman_vert.cpp` |
 | Column bottom clipping fix: glyphs at column end no longer clipped | `lvtextfm.cpp` |
 | sbox screen_y offset (P5): `windowToDocPoint`/`docToWindowPoint` account for `clip.top` | `lvdocview.cpp` |
 | Character overlap fix (上にめり込む): `vert_min_next_x` correctly prevents overlap | `lvtextfm.cpp` |
