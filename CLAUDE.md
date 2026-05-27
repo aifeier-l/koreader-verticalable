@@ -210,14 +210,38 @@ int eff_w = (is_cjk && (int)wi->width < font_sz) ? font_sz : (int)wi->width;
 
 ### Glyph placement in vertical mode (lvfntman.cpp + lvfntman_vert.{h,cpp})
 
-HarfBuzz is shaped with `HB_DIRECTION_TTB` so `y_advance` carries the vertical advance.
-Glyph (gx, gy) is then computed by **JLReq character class** (LuaTeX-ja jfm-ujisv.lua
-port), with two fork-only deviations from strict LuaTeX-ja semantics: (a) half-em
-compaction is NOT applied — every glyph keeps em advance, and (b) the in-slot
-positioning anchors the bitmap to the slot edge instead of trusting the font's vBY.
-Both deviations address the same root cause: Noto / Hiragino +vert form vmtx values
-reflect horizontal-mode design choices and place brackets/punctuation several px off
-JLReq's prescribed slot edges when the strict LuaTeX-ja math is applied.
+LuaTeX-ja-conformant vertical typography per JLReq.  Four-stage pipeline:
+
+1. **Pre-shape codepoint substitution** (Phase 5a, lvfntman.cpp measureText + DrawTextString
+   buffer-fill loops + lvfntman_vert.cpp `getVertPresentationForm`): in vertical mode,
+   U+2014 → U+FE31, U+300C → U+FE41, U+3001 → U+FE11 etc. (27-entry table ported
+   from LuaTeX-ja ltj-jfont.lua:945-957).  Font-conditional via `FT_Get_Char_Index`.
+   Only the HarfBuzz buffer sees the substituted codepoint — the caller's text[]
+   stays original so JFM class lookup, getRectEx, line-break logic all see the
+   ORIGINAL char (mirroring LuaTeX-ja's ltjs.orig_char_table mechanism).
+
+2. **Phase 3 — half-em compaction** (lvfntman.cpp measureText + DrawTextString
+   advance computation + lvfntman_vert.cpp `getJLReqVertSlotWidth`): override
+   HarfBuzz's natural y_advance with the JFM-specified slot width per class:
+   open bracket / close bracket / comma / middle dot / period / halfwidth kana
+   get em/2; body CJK / dash / exclam / quest / vert mark / Latin stay em.
+
+3. **Phase 5 — inter-class glue/kern matrix** (lvtextfm.cpp measureText loop +
+   lvfntman_vert.cpp `getJLReqGlueKernEighths`): apply JLReq inter-class
+   spacing per jfm-ujisv [N].glue[M] base values.  e.g. 0.5em is appended
+   after CLOSE_BRACKET_COMMA before BODY (= space after 、), 0.5em is
+   appended after BODY before OPEN_BRACKET (= space before 「), 0.25em
+   around MIDDLE_DOT.  The pad widens the current char's slot; cumulative
+   tracker propagates the shift to subsequent chars in the fragment.
+
+4. **Phase 4 — vmtx + cwa in-slot Y** (lvfntman.cpp DrawTextString):
+       gx = col_center + vBX
+       gy = slot_top  + vBY + cwa
+       cwa = align * (fwidth - vadv)  -- align ∈ {0, 0.5, 1}
+   Single unified formula for all classes.  For body CJK (align=middle,
+   fwidth=em): cwa=0 → pure vmtx-based.  For half-em open bracket
+   (align=right): cwa=-em/2 shifts the bitmap to the bottom of the
+   compacted slot (visually attaches 「 to the following char).
 
 #### Character classes (lvfntman_vert.{h,cpp}: `getJLReqVertClass`)
 
@@ -237,54 +261,38 @@ Ten classes mirror jfm-ujisv.lua's class table; verified line-by-line against
 | `VERT_MARK`              | — fork-only, signalled by `LFNT_HINT_VERTICAL_MARK` (ー — ‥ … 〜 ～ ―) | em | middle |
 | `OTHER`                  | Latin/numerals/etc.                            | em     | middle |
 
-#### Placement formulas (lvfntman.cpp `DrawTextString` is_vertical_draw block)
+#### Glue/Kern matrix (lvfntman_vert.cpp `getJLReqGlueKernEighths`)
 
-1. **Body CJK & vert marks** (use_uniform_body = `isUniformVerticalIdeograph(c) ||
-   is_vert_mark`):
-   - X: font's vBX from vmtx cache when present (optical centre, corrects
-     asymmetric-glyph ink-vs-rect-centre mismatch on し ら っ).  Falls back to
-     `bitmap_width / 2` centering for vert marks (Hiragino-style fonts leave
-     +vert form vBX = 0; bitmap-centre works font-independently).
-   - Y: bitmap-centred for body CJK; 75 % biased toward slot bottom for vert marks
-     (`(em - bmh) * 3/4`) so ー / … get ~5 px gap from the preceding glyph
-     instead of ~3 px (preceding glyph descent + 3 px reads as visual overlap).
+Per-class-pair JLReq inter-character spacing, in eighths of em.  Major entries:
 
-2. **Half-em JFM classes** (brackets, punctuation, halfwidth kana — anchored to
-   slot edge via `getJLReqVertHalfEmYOffset`):
-   - The bitmap is anchored to the **em slot** (not half-em) per layout.align:
-     - `LEFT`  → gy = y + 0 (bitmap top at slot top — 」』、，。 cluster close
-                 to the preceding char in the column)
-     - `MIDDLE`→ gy = y + (em - bmh)/2 (centred — ・)
-     - `RIGHT` → gy = y + (em - bmh) (bitmap bottom at slot bottom — 「『〈《【〔〘
-                 cluster close to the next char in the column)
-   - This **ignores the font's vBY** for these classes; vBY values in Noto and
-     Hiragino represent horizontal-mode design (e.g. 「 has vBY ≈ 0.63 em) and
-     wouldn't land the bitmap on JLReq's prescribed edge.
-   - The advance stays em (no half-em compaction): the goal is JLReq-style
-     in-slot anchoring without LuaTeX-ja's column compaction, which visually
-     shifts subsequent characters up by em/2 per preceding half-em char and
-     was rejected as visually wrong in screenshot review.
+| prev \ next  | BODY | OPEN | CLOSE | MIDDLE | PERIOD | DASH | EXCL | HKANA |
+|--------------|------|------|-------|--------|--------|------|------|-------|
+| BODY         | 0    | 4    | 0     | 2      | 0      | 0    | 0    | 0     |
+| OPEN         | 0    | 0    | 0     | 2      | 0      | 0    | 0    | 0     |
+| CLOSE/、     | 4    | 4    | 0     | 2      | 0      | 4    | 4    | 4     |
+| MIDDLE       | 2    | 2    | 2     | 4      | 2      | 2    | 2    | 2     |
+| PERIOD       | 4    | 4    | 0     | 6      | 0      | 4    | 4    | 4     |
+| DASH         | 0    | 4    | 0     | 2      | 0      | 0    | 0    | 0     |
+| EXCL         | 8    | 4    | 0     | 6      | 0      | 0    | 0    | 8     |
+| HKANA        | 0    | 4    | 0     | 2      | 0      | 0    | 0    | 0     |
 
-3. **Fall-through** (no JFM class match, no vmtx, no `LFNT_HINT_VERTICAL_MARK`):
-   font's vmtx vBY-based, with em-top alignment fallback when no vhea.
+(eighths of em — multiply by em / 8 for px)
 
-#### Why these deviations from LuaTeX-ja
+#### Upstream interaction fixes
 
-LuaTeX-ja is designed for high-end print typography with carefully-tuned fonts
-(Kozuka, Hiragino).  Its half-em compaction + cwa shift mathematics assumes the
-font's vBY positions the glyph at the right spot within its half-em slot.
+Three upstream-side guards needed for our JFM compaction to take effect:
 
-For e-book reader fonts (Noto Serif JP, Noto Sans CJK SC):
-
-  - vBY of 「 is ≈ 0.63 em rather than the 0.5 em that LuaTeX-ja's math implicitly
-    expects, leaving 「 in the middle of the half-em slot instead of the
-    JLReq-prescribed edge.
-  - Half-em compaction at the word advance level shifts every glyph downstream
-    up by em/2 per compacted glyph, which visually moves brackets and punctuation
-    UP — opposite of what e-book readers expect.
-
-The fork's "em slot + JLReq-edge anchor + no compaction" gives stable JLReq
-positioning regardless of font vmtx quality.
+1. `getFlexibleCJKWidthAdjustment` (lvtextfm.cpp:2798) returns wa8=8 (= no
+   reduction) in vertical mode.  Without this, upstream's wa8 multiplier
+   would further halve our already-half-em advance to em/4 for line-start
+   brackets.
+2. `vert_layout_min_x` post-pass (lvtextfm.cpp:3680) skips its
+   `eff_w = max(word->width, font_size)` clamp when the word's first char
+   is a half-em JFM class.  Without this, layout would round word->width
+   back up to em.
+3. `vert_min_next_x` Draw tracker (lvtextfm.cpp:7454) has the same skip.
+   Without this, the Draw renderer would advance the next char by em
+   instead of by word->width.
 
 HarfBuzz TTB writes `x_offset = -vertOriginX`, `y_offset = -vertOriginY` into
 `glyph_pos[]` (compensation for an LTR-style pen).  The fork places the pen at the
@@ -329,8 +337,8 @@ bool LVDocView::isVerticalText() const {
 | Underline highlight: vertical line on right edge of column | `readerview.lua` |
 | Strikeout highlight: vertical line through column center | `readerview.lua` |
 | Vertical footer: progress bar fills right→left, TOC ticks mirrored | `readerfooter.lua` |
-| Glyph rotation: ー 〜 … 、。括弧類 etc. use vertical forms (`vert`/`vrt2`) | `lvfntman.cpp` |
-| JLReq-class glyph placement (LuaTeX-ja jfm-ujisv port): 10-class classifier + em-slot in-slot align; brackets/punctuation anchored to JLReq slot edges | `lvfntman.cpp`, `lvfntman_vert.{h,cpp}` |
+| Glyph rotation: ー 〜 ― etc. use vertical forms (`vert` only — `+vrt2` disabled for fork) or 90° CW rotation when no +vert form | `lvfntman.cpp` |
+| LuaTeX-ja JFM vertical typography (jfm-ujisv.lua port, m-tky/koreader-tategumi#15): 10-class classifier (Phase 1+2), pre-shape codepoint substitution to U+FE10..FE48 (Phase 5a), half-em compaction for [1][2][3][4][7] (Phase 3), vmtx + cwa in-slot Y (Phase 4), inter-class glue/kern matrix (Phase 5) | `lvfntman.cpp`, `lvfntman_vert.{h,cpp}`, `lvtextfm.cpp` |
 | Column bottom clipping fix: glyphs at column end no longer clipped | `lvtextfm.cpp` |
 | sbox screen_y offset (P5): `windowToDocPoint`/`docToWindowPoint` account for `clip.top` | `lvdocview.cpp` |
 | Character overlap fix (上にめり込む): `vert_min_next_x` correctly prevents overlap | `lvtextfm.cpp` |
