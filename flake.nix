@@ -50,6 +50,15 @@
             clang-tools cppcheck
             # System libs needed for crengine lint to resolve includes via pkg-config
             harfbuzz freetype fribidi libunibreak libutf8proc
+            # LuaTeX-ja reference renderer for vertical-rl visual comparison
+            # (used during JFM development to verify output matches LuaTeX-ja).
+            (texlive.combine {
+              inherit (texlive) scheme-basic luatexja fontspec luaotfload xkeyval lualatex-math luatex
+                                jlreq everyhook filehook
+                                ifmtarg framed cmap zref
+                                pdftexcmds infwarerr kvoptions epstopdf-pkg
+                                svn-prov koma-script trimspaces etoolbox xstring;
+            })
           ];
 
           shellHook = ''

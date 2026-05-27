@@ -17,6 +17,12 @@ to rebase onto upstream updates. Therefore:
   upstream repositories (koreader/koreader, etc.) by mistake.
 - **All written communication in English**: Code, comments, commit messages,
   issues, PRs, and documentation must all be written in English.
+- **No pixel measurement of screenshots**: Never measure screenshot
+  dimensions / bounding boxes via ImageMagick `connected-components` or
+  similar.  Always confirm geometry via runtime log diagnostics (fprintf
+  to `/tmp/kr_*.log` using `static FILE *F`) instead.  Pixel measurements
+  on small low-DPI emulator screenshots are unreliable and have produced
+  wrong diagnoses in past sessions.
 
 ## Project Goal
 
