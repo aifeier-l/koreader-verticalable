@@ -214,11 +214,16 @@ LuaTeX-ja-conformant vertical typography per JLReq.  Four-stage pipeline:
 
 1. **Pre-shape codepoint substitution** (Phase 5a, lvfntman.cpp measureText + DrawTextString
    buffer-fill loops + lvfntman_vert.cpp `getVertPresentationForm`): in vertical mode,
-   U+2014 → U+FE31, U+300C → U+FE41, U+3001 → U+FE11 etc. (27-entry table ported
-   from LuaTeX-ja ltj-jfont.lua:945-957).  Font-conditional via `FT_Get_Char_Index`.
+   U+300C → U+FE41, U+3001 → U+FE11 etc. (~23-entry table ported
+   from LuaTeX-ja ltj-jfont.lua:948-957).  Font-conditional via `FT_Get_Char_Index`.
    Only the HarfBuzz buffer sees the substituted codepoint — the caller's text[]
    stays original so JFM class lookup, getRectEx, line-break logic all see the
    ORIGINAL char (mirroring LuaTeX-ja's ltjs.orig_char_table mechanism).
+   **Dashes/leaders (U+2014, U+2013, U+2025, U+2026) are DELIBERATELY omitted**
+   from this table — LuaTeX-ja nullifies vform entries the font's `vrt2` feature
+   already handles (ltj-jfont.lua:1011-1014), so for fonts whose `+vrt2` maps
+   —/‥/… to multi-em composite glyphs (Hiragino 二倍ダーシ gid8857 etc.) we let
+   `+vrt2` produce the continuous-stroke composite instead of pre-substituting.
 
 2. **Phase 3 — half-em compaction** (lvfntman.cpp measureText + DrawTextString
    advance computation + lvfntman_vert.cpp `getJLReqVertSlotWidth`): override
@@ -337,8 +342,12 @@ bool LVDocView::isVerticalText() const {
 | Underline highlight: vertical line on right edge of column | `readerview.lua` |
 | Strikeout highlight: vertical line through column center | `readerview.lua` |
 | Vertical footer: progress bar fills right→left, TOC ticks mirrored | `readerfooter.lua` |
-| Glyph rotation: ー 〜 ― etc. use vertical forms (`vert` only — `+vrt2` disabled for fork) or 90° CW rotation when no +vert form | `lvfntman.cpp` |
-| LuaTeX-ja JFM vertical typography (jfm-ujisv.lua port, m-tky/koreader-tategumi#15): 10-class classifier (Phase 1+2), pre-shape codepoint substitution to U+FE10..FE48 (Phase 5a), half-em compaction for [1][2][3][4][7] (Phase 3), vmtx + cwa in-slot Y (Phase 4), inter-class glue/kern matrix (Phase 5) | `lvfntman.cpp`, `lvfntman_vert.{h,cpp}`, `lvtextfm.cpp` |
+| Glyph rotation: ー 〜 ― etc. use vertical forms (`+vert`, `+vrt2`, `+vkrn` all enabled, matching LuaTeX-ja `auto_enable_vrt2`) or 90° CW rotation when no +vert form. `+vrt2` lets consecutive dashes/leaders (——, ‥, …) chain into one continuous composite glyph | `lvfntman.cpp` |
+| Kinsoku (禁則) + cascading 追い出し (oidashi): 行頭/行末 line-break prohibition with a 35-char 行頭禁則 table (closing brackets, 、。, ー々ヽヾゝゞ〻, small kana, ゛゜) and a wrap-back loop (max 5) for chained 」」 / 「「 | `lvtextfm_vert.cpp` `isVertLineStartProhibitedExt` |
+| kanjiskip/xkanjiskip vertical justification: 0.25em inserted at CJK↔non-CJK boundaries; LAYOUT (`word->x`) and Draw (`vert_min_next_x`) trackers kept in lockstep | `lvtextfm_vert.cpp` |
+| LuaTeX-ja JFM vertical typography (jfm-ujisv.lua port, m-tky/koreader-tategumi#15): 10-class classifier (Phase 1+2), pre-shape codepoint substitution to U+FE10..FE48 (Phase 5a, dashes excluded for +vrt2), half-em compaction for [1][2][3][4][7] (Phase 3), vmtx + cwa in-slot Y (Phase 4), inter-class glue/kern matrix (Phase 5) | `lvfntman.cpp`, `lvfntman_vert.{h,cpp}`, `lvtextfm.cpp`, `lvtextfm_vert.cpp` |
+| Multi-em column-break fix: 2+ char ruby boxes, 2em dash composites, and kana-repeat marks break before the column bottom instead of overflowing/clipping (Draw-position check applies to non-CJK multi-em glyphs, not CJK only) | `lvtextfm_vert.cpp` |
+| Ruby-following char highlight alignment: LAYOUT inline-box advance uses same `letter_spacing` value as Draw, so the char after a ruby group no longer drifts ½em below its glyph | `lvtextfm_vert.cpp` |
 | Column bottom clipping fix: glyphs at column end no longer clipped | `lvtextfm.cpp` |
 | sbox screen_y offset (P5): `windowToDocPoint`/`docToWindowPoint` account for `clip.top` | `lvdocview.cpp` |
 | Character overlap fix (上にめり込む): `vert_min_next_x` correctly prevents overlap | `lvtextfm.cpp` |
@@ -359,11 +368,15 @@ base/                                           crengine submodule
   cre.cpp                                       KOReader↔crengine bridge
   thirdparty/kpvcrlib/crengine/crengine/
     include/lvlogical.h                         CSS logical property index helpers
+    include/lvtextfm_fork.h                     Fork-only decls + VerticalDrawState struct
+    include/lvfntman_vert.h                     JFM class enum, vert metrics cache decls
     src/lvrend.cpp                              Block rendering, FlowState
-    src/lvtextfm_vert.cpp                       Vertical paragraph layout (fork-only)
+    src/lvtextfm_vert.cpp                       Vertical paragraph layout, kinsoku/oidashi/xkanjiskip (fork-only, #included by lvtextfm.cpp)
     src/lvtextfm.cpp                            measureText, ruby inline box
-    src/lvdocview.cpp                           windowToDocPoint, docToWindowPoint, isVerticalText
-    src/lvfntman.cpp                            HarfBuzz font shaping, +vert features, glyph rotation
+    src/lvfntman_vert.cpp                       JFM class tables, vform, slot width, glyph rotation (fork-only; absorbed former lvfntman_vert_slot.cpp)
+    src/lvdocview_vert.cpp                      vertPageRight, isVerticalText (fork-only, #included by lvdocview.cpp)
+    src/lvdocview.cpp                           windowToDocPoint, docToWindowPoint
+    src/lvfntman.cpp                            HarfBuzz font shaping, +vert/+vrt2/+vkrn features, glyph rotation
     src/lvtinydom.cpp                           DOM, getAbsRect, getRect, getSegmentRects
 frontend/document/credocument.lua               Lua wrappers: getWordFromPosition, getTextFromPositions
 spec/unit/vertical_text_spec.lua                Formal regression tests
