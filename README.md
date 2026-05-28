@@ -19,6 +19,22 @@ Installation steps are the same as upstream KOReader:
 
 In-app OTA update is supported once installed: **Menu → Update → Check for update**.
 
+### Nightly builds
+
+In addition to tagged releases, a **nightly** build is produced automatically from
+the latest `master` every day (around 05:00 JST) for all supported devices. Use it
+to get vertical-text fixes and features before they land in a numbered release —
+at the cost of less testing, so it may be less stable.
+
+- **Download**: the rolling
+  [`nightly` pre-release](https://github.com/m-tky/koreader-tategumi/releases/tag/nightly)
+  (labelled `vYYYY.MM.DD`). It is replaced in place by each build, so the link
+  always points at the most recent one.
+- **OTA**: switch the update channel to development once, then check for updates
+  as usual: **Menu → Update → Settings → Update channel → Development**, then
+  **Menu → Update → Check for update**. Switch back to **Stable** to return to
+  numbered releases.
+
 ## Using vertical text
 
 EPUBs that already contain `writing-mode: vertical-rl` in their CSS (most commercial
