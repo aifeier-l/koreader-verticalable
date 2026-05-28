@@ -64,9 +64,11 @@ The override is saved per-book and will not be overwritten on subsequent opens.
 
 ## Known limitations
 
-- **Mixed horizontal/vertical layouts**: A single document renders entirely in one
-  writing mode. EPUBs that mix horizontal and vertical sections within the same file
-  may not display correctly.
+- **Mixed writing modes within a single page**: Books that switch writing mode per
+  section — a vertical novel with a horizontal author bio, colophon or ad page, for
+  example — now render each page in its own mode. What is still unsupported is mixing
+  horizontal and vertical content *within one page* (e.g. a horizontal table or block
+  embedded in vertical body text); such intra-page mixing may not display correctly.
 
 - **Whitespace between ruby groups**: EPUBs with stray whitespace adjacent to ruby
   groups may show a small gap between the ruby and the following character. This is
