@@ -1,5 +1,7 @@
 # koreader-tategumi
 
+**English** | [日本語](#日本語)
+
 **KOReader fork with Japanese vertical text (縦書き / tategumi) support.**
 
 This is a personal fork of [KOReader](https://github.com/koreader/koreader) that adds
@@ -123,3 +125,130 @@ project's main features, supported formats, and developer documentation.
 
 [![Last commit](https://img.shields.io/github/last-commit/m-tky/koreader-tategumi?color=orange)](https://github.com/m-tky/koreader-tategumi/commits/master)
 [![License](https://img.shields.io/github/license/koreader/koreader)](https://github.com/koreader/koreader/blob/master/COPYING)
+
+---
+
+# 日本語
+
+[English](#koreader-tategumi) | **日本語**
+
+**KOReader を日本語の縦書き（tategumi）に対応させた個人フォークです。**
+
+EPUB 形式の日本語小説向けに `writing-mode: vertical-rl` レンダリングを追加した
+[KOReader](https://github.com/koreader/koreader) のフォークです。
+upstream KOReader（master / nightly）と定期的に同期しています。
+
+![三四郎（夏目漱石）の縦書き表示](doc/screenshots/tategumi.png)
+
+## ダウンロード
+
+ご利用の端末向けビルドを
+[最新リリース](https://github.com/m-tky/koreader-tategumi/releases/latest)
+からダウンロードしてください。インストール手順は upstream KOReader と同じです:
+[Android](https://github.com/koreader/koreader/wiki/Installation-on-Android-devices) •
+[Kindle](https://github.com/koreader/koreader/wiki/Installation-on-Kindle-devices) •
+[Kobo](https://github.com/koreader/koreader/wiki/Installation-on-Kobo-devices)
+
+インストール後はアプリ内 OTA 更新に対応しています: **メニュー → 更新 → 更新を確認**。
+
+### Nightly ビルド
+
+タグ付きリリースに加え、毎日（日本時間 5:00 頃）最新の `master` から **nightly**
+ビルドが全対応端末向けに自動生成されます。番号付きリリースに入る前の縦書き
+修正・機能を試せますが、テスト量が少ないため安定性は劣ります。
+
+- **ダウンロード**: ローリング更新の
+  [`nightly` pre-release](https://github.com/m-tky/koreader-tategumi/releases/tag/nightly)
+  （`vYYYY.MM.DD` ラベル）。各ビルドで置き換わるため、リンクは常に最新を指します。
+- **OTA**: 更新チャンネルを Development に一度切り替えれば、あとは通常通りです:
+  **メニュー → 更新 → 設定 → 更新チャンネル → Development**、続いて
+  **メニュー → 更新 → 更新を確認**。番号付きリリースに戻すには **Stable** に
+  切り替えてください。
+
+## 縦書きの利用方法
+
+CSS に `writing-mode: vertical-rl` が既に含まれている EPUB（市販の日本語小説の
+多くがそうです）は自動的に縦書きで表示されます。
+
+含まれていない EPUB には、**Typeset（Aa アイコン）→ Style tweaks → Book-specific
+tweak**（長押しで編集）から以下を追加してください:
+
+```css
+body { writing-mode: vertical-rl !important; }
+```
+
+## RTL ページ順序（漫画・右開き）
+
+日本語の漫画 EPUB や、右から左へのページ順序を持つ CBZ/CBR ファイルは、
+初回オープン時に自動検出されます:
+
+- **EPUB**: OPF spine の `page-progression-direction="rtl"` を読み取り
+- **CBZ/CBR**: `ComicInfo.xml` の `<ReadingDirection>RTL</ReadingDirection>` を読み取り
+
+RTL が検出されると通知が表示され、ページめくり方向が反転し、進捗バーは右
+（1 ページ目）から左（最終ページ）に進みます。
+
+検出された方向は **メニュー → タップとジェスチャー → ページめくり →
+ページめくり方向を切り替え** からいつでも上書きできます。変更内容は本ごとに
+保存され、次回オープン時に上書きされません。
+
+## 既知の制限
+
+- **1 ページ内での書字方向混在**: 縦書き小説に横書きの著者紹介・奥付・広告が
+  混在するようなセクション単位の切り替えは、ページごとに各々の方向で描画
+  されるようになりました。一方、**1 ページ内**に縦書きと横書きを混在させる
+  ケース（縦書き本文中に横書きの表やブロックなど）は未対応で、正しく表示
+  されない場合があります。
+
+- **ルビ間の空白**: ルビグループに隣接する空白文字が EPUB ソースに含まれている
+  場合、ルビと次の文字の間に小さなギャップが残ることがあります。これは EPUB
+  側の仕様であり、レンダリングのバグではありません。
+
+- **段落字下げの二重化**: 一部の EPUB は U+3000（`　` 全角スペース）で字下げを
+  行いますが、CREngine がデフォルトの `text-indent: 1.2em` も適用するため二
+  文字分の字下げになります。本ごとに **Aa → Style tweaks → Paragraph first-line
+  indentation → 0**（インデント無し）で修正してください。
+
+## 互換性
+
+本フォークは upstream KOReader の master を追従しているため、その基盤は
+upstream の安定版ではなく **nightly** 相当です。サードパーティプラグインが
+動作しない場合は、まず本家 upstream KOReader nightly でも同様に動作しないか
+ご確認ください。upstream でも壊れているプラグインは本フォークの対象外です。
+
+### vertical-rl 対応プラグイン
+
+以下のプラグインは本フォークの vertical-rl 向けにソフトフォーク版が用意されています:
+
+- **Bookends** ([m-tky/bookends.koplugin](https://github.com/m-tky/bookends.koplugin)) —
+  設定可能なテキストオーバーレイ。
+  [AndyHazz/bookends.koplugin](https://github.com/AndyHazz/bookends.koplugin) から
+  フォークし、縦書きドキュメントで進捗バーが右→左に進むよう vertical-rl
+  を自動検出します。
+
+## 上級: vanilla KOReader からの移行
+
+既に vanilla KOReader をインストール済みの場合、再インストールせずに
+本フォークへ切り替えられます:
+
+1. 本リポジトリの `frontend/ui/otamanager.lua` を端末上の
+   `<koreader-dir>/frontend/ui/otamanager.lua` にコピーします。
+2. KOReader を再起動し、**メニュー → 更新 → 更新を確認** へ進みます。
+3. KOReader が本フォークのビルドを自動的にダウンロード・適用します。
+
+## サポート
+
+本縦書きフォークがお役に立った場合、開発を支援していただけると幸いです:
+
+[![GitHub Sponsors](https://img.shields.io/github/sponsors/m-tky?label=Sponsor&logo=GitHub&style=for-the-badge)](https://github.com/sponsors/m-tky)
+
+upstream の KOReader プロジェクト本体については
+[koreader/koreader](https://github.com/koreader/koreader) をご覧ください。
+
+## 謝辞
+
+KOReader は世界中のボランティアが開発する e-ink デバイス向けオープンソース
+電子書籍リーダーです。本フォークの縦書き（tategumi）実装はその成果の上に
+構築されています。本プロジェクトの主要機能・対応フォーマット・開発者向け
+ドキュメントは [upstream KOReader](https://github.com/koreader/koreader) を
+ご参照ください。
