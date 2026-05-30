@@ -96,7 +96,7 @@ local function showusage()
     print("If you don't pass any path, the File Manager will be opened")
     print("")
     print("This software is licensed under the AGPLv3.")
-    print("See http://github.com/koreader/koreader for more info.")
+    print("See https://github.com/m-tky/koreader-tategumi for more info.")
 end
 
 local function getPathFromURI(str)

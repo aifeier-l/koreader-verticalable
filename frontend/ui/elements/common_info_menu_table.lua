@@ -54,7 +54,7 @@ common_info.report_bug = {
     callback = function(touchmenu_instance)
         local DataStorage = require("datastorage")
         local log_path = string.format("%s/%s", DataStorage:getDataDir(), "crash.log")
-        local common_msg = T(_("Please report bugs to \nhttps://github.com/koreader/koreader/issues\n\nVersion:\n%1\n\nDetected device:\n%2"),
+        local common_msg = T(_("Please report bugs to \nhttps://github.com/m-tky/koreader-tategumi/issues\n\nVersion:\n%1\n\nDetected device:\n%2"),
             Version:getCurrentRevision(), Device:info())
         local log_msg = T(_("Verbose logs will make our investigations easier. If possible, try to reproduce the issue while it's enabled, and attach %1 to your bug report."), log_path)
 
