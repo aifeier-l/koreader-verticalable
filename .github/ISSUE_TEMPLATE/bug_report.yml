@@ -35,7 +35,7 @@ body:
       description: >-
         Menu → Help → KOReader version (Tap to copy). The full git-rev string, please.
         メニュー → ヘルプ → KOReaderバージョン（タップでコピー）。git-rev 全文を貼ってください。
-      placeholder: "e.g., v2026.05-12-gabc12345"
+      placeholder: "e.g., v2026.05.8-19-g070c38dd3_2026-05-30"
     validations:
       required: true
 
