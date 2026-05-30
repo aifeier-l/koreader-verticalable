@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Upstream KOReader issues
+  - name: "Questions and general usage / 質問・使い方"
+    url: https://github.com/m-tky/koreader-tategumi#readme
+    about: "Read the README first. / まず README をお読みください。"
+  - name: "Upstream KOReader issues"
     url: https://github.com/koreader/koreader/issues
-    about: For issues unrelated to vertical text, please report to upstream KOReader.
+    about: "For issues unrelated to vertical text. / 縦書きと無関係の問題は upstream へ。"

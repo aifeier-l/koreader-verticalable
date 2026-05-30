@@ -1,0 +1,71 @@
+name: "Feature request / 機能要望"
+description: "Suggest a feature for vertical (tategumi) text rendering / 縦書き表示の機能要望"
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Scope / 対象範囲:** This fork focuses exclusively on Japanese vertical text
+        (縦書き / tategumi). Feature requests outside this scope will be closed — please
+        direct them to [upstream KOReader](https://github.com/koreader/koreader/issues).
+
+        本フォークは日本語の縦書き専用です。範囲外の要望は upstream にお願いします。
+
+  - type: checkboxes
+    id: preflight-checks
+    attributes:
+      label: "Before submitting / 投稿前の確認"
+      options:
+        - label: "I searched existing issues and this is not a duplicate. / 既存 issue を検索し重複でないことを確認した。"
+          required: true
+        - label: "This relates to vertical (縦書き) text. / 縦書きに関する要望である。"
+          required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: "What problem does this address? / 解決したい問題"
+      description: "Describe the limitation or difficulty. / 困っていること・制限を説明してください。"
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: "Proposed behaviour / 期待する挙動"
+      description: "What should KOReader do? / KOReader がどう振る舞ってほしいですか？"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: basis
+    attributes:
+      label: "Basis for the request / 要望の根拠"
+      description: >-
+        Helps triage. Spec-conformance issues take priority over personal preferences.
+        仕様準拠 (JLReq / W3C css-writing-modes / OpenType `vert`/`vrt2` 等) の不備は優先度が高いです。
+      options:
+        - "JLReq / W3C / OpenType spec conformance (仕様準拠の不備)"
+        - "Behaviour in another reader (Kinoppy, Honto, R2 Reader, Apple Books, etc.)"
+        - "Personal preference / readability (個人の好み・可読性)"
+        - "Other (説明してください)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: references
+    attributes:
+      label: "References / 参考資料"
+      description: >-
+        Links to JLReq sections, CSS specs, OpenType docs, screenshots from other readers,
+        example EPUBs, etc.
+        JLReq の節番号、CSS 仕様の URL、他リーダーのスクリーンショット、サンプル EPUB など。
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: "Additional context / 補足"
+    validations:
+      required: false

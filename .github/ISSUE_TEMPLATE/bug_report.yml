@@ -1,116 +1,184 @@
-name: Bug report
-description: Report a rendering or display issue in vertical (tategumi) text
+name: "Bug report / バグ報告"
+description: "Report a rendering or display issue in vertical (tategumi) text / 縦書き表示の不具合を報告"
 body:
   - type: markdown
     attributes:
       value: |
         Thanks for reporting! This fork focuses on Japanese vertical text (縦書き / tategumi).
+        ご報告ありがとうございます。本フォークは日本語の縦書き表示専用です。
 
-        **Common non-bugs — please check first:**
-        - **Display / glyph orientation** issues are often caused by font limitations
-          (missing OpenType `vert`/`vrt2` features), not rendering bugs.
-        - **Third-party plugin breakage** that also occurs with upstream KOReader
-          nightly (master) is out of scope — please report to the plugin's author.
+        **Common non-bugs — please check first / よくある誤解：**
+        - **Glyph orientation** issues are usually font limitations (missing OpenType `vert`/`vrt2`
+          features), not rendering bugs. Try Noto Serif CJK JP or another well-supported font first.
+          字形の向きの問題は多くの場合フォント側の制限です。まず別フォントで再現するか確認してください。
+        - **Third-party plugin breakage** that also occurs in upstream KOReader is out of scope.
+          サードパーティプラグインの問題で upstream でも起きるものは対象外です。
 
-        Please read each field carefully before submitting.
+        Fields marked / 必須項目は: ***required***.
 
   - type: checkboxes
     id: preflight-checks
     attributes:
-      label: Before submitting
+      label: "Before submitting / 投稿前の確認"
       options:
-        - label: I searched existing issues and this is not a duplicate.
+        - label: "I searched existing issues and this is not a duplicate. / 既存 issue を検索し重複でないことを確認した。"
           required: true
-        - label: >-
-            This issue is specific to vertical text — it does not occur with horizontal
-            text in upstream KOReader nightly (master).
+        - label: "The problem occurs in vertical writing mode (縦書き). / 縦書きモードで発生する問題である。"
           required: true
-        - label: >-
-            For display / glyph issues: I tried with a different font and the problem persists.
-          required: false
-        - label: >-
-            For third-party plugin issues (required if applicable): I confirmed the plugin
-            works with upstream KOReader nightly (master).
+        - label: "For glyph/font issues: I tried a different font and the problem persists. / 字形の問題は別フォントでも再現することを確認した。"
           required: false
 
   - type: input
     id: koreader-version
     attributes:
-      label: KOReader-tategumi build
-      description: Visible in Menu → Help → About KOReader
-      placeholder: "e.g., 2026.05-tategumi-abc1234"
+      label: "KOReader-tategumi build / ビルド"
+      description: >-
+        Menu → Help → KOReader version (Tap to copy). The full git-rev string, please.
+        メニュー → ヘルプ → KOReaderバージョン（タップでコピー）。git-rev 全文を貼ってください。
+      placeholder: "e.g., v2026.05-12-gabc12345"
     validations:
       required: true
 
   - type: dropdown
     id: device-type
     attributes:
-      label: Device / platform
+      label: "Device / 端末"
+      description: >-
+        Note: this fork is primarily tested on Kindle PaperWhite 2. Other devices may work but
+        are not regularly verified.
+        本フォークは主に Kindle PaperWhite 2 で動作確認しています。他端末は未検証の場合があります。
       options:
-        - Kindle
+        - Kindle (PaperWhite, Oasis, Scribe, etc.)
         - Kobo
-        - Cervantes
-        - Pocketbook
-        - ReMarkable
         - Android
-        - Linux (AppImage)
-        - Linux (Deb / generic)
-        - Linux (Flatpak)
-        - MacOS (Intel)
-        - MacOS (Apple Silicon, M1, M2, …)
+        - Linux (AppImage / Deb / Flatpak)
+        - MacOS
+        - Emulator (kodev run emulator)
         - Other (please specify in additional information)
+    validations:
+      required: true
+
+  - type: input
+    id: device-resolution
+    attributes:
+      label: "Screen resolution and DPI / 画面解像度・DPI"
+      description: >-
+        Vertical text layout is highly sensitive to column width. Even an approximate value helps
+        reproduction. Most Kindle PW2 = 758×1024, 212dpi; Kindle Oasis 3 = 1264×1680, 300dpi.
+        縦書きは列幅に敏感です。概算でも構いません。
+      placeholder: "e.g., 758x1024, 212dpi (Kindle PW2) / 不明 (unknown)"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: reproducibility
+    attributes:
+      label: "Reproducibility / 再現性"
+      options:
+        - Always (100%) / 必ず再現
+        - Sometimes / 時々
+        - Once, could not reproduce / 一度のみ
     validations:
       required: true
 
   - type: input
     id: font-name
     attributes:
-      label: Font name
+      label: "Font name and source / フォント名と入手元"
       description: >-
-        Which font are you using? Required for display / glyph issues; leave blank otherwise.
-        Vertical text requires a font with OpenType `vert`/`vrt2` features for correct
-        glyph orientation (punctuation, brackets, etc.).
-      placeholder: "e.g., Noto Serif CJK JP, IPAMincho, (KOReader built-in)"
+        For glyph/display issues, also note the version or distribution (e.g., Google Fonts
+        vs Adobe Source build). Required for glyph issues.
+        字形の問題の場合、版数や配布元（Google Fonts 版か Adobe 版か等）も書いてください。
+      placeholder: "e.g., Noto Serif CJK JP (Google Fonts, v2.004) / KOReader built-in Noto Sans CJK"
     validations:
       required: false
 
   - type: dropdown
     id: writing-mode-setup
     attributes:
-      label: How is vertical text enabled?
+      label: "How is vertical text enabled? / 縦書きを有効にしている方法"
+      description: >-
+        To check: open the EPUB in horizontal-only upstream KOReader — if it still renders
+        vertically there, the EPUB has built-in CSS. Otherwise it's a style tweak.
+        確認方法：横書きの upstream KOReader で開いて縦のまま表示されれば EPUB 側の CSS。
       options:
-        - The EPUB already contains writing-mode:vertical-rl in its CSS
-        - I added a style tweak in KOReader settings
-        - Not sure
+        - "EPUB has writing-mode:vertical-rl in its own CSS / EPUB 自体に CSS"
+        - "Style tweak (KOReader settings) / KOReader のスタイル微調整"
     validations:
       required: true
 
   - type: input
+    id: font-size
+    attributes:
+      label: "Font size and line spacing / 文字サイズ・行間"
+      description: >-
+        Menu → Typeset → font size, line spacing. Vertical column width = font size × line spacing.
+        Required for any layout or column-break issue.
+        レイアウトや改行の問題では必須です。
+      placeholder: "e.g., font 22, line spacing 100%"
+    validations:
+      required: false
+
+  - type: input
     id: epub-info
     attributes:
-      label: EPUB title and source
+      label: "EPUB title and source / EPUB タイトルと入手元"
       description: >-
-        Which book triggers the issue? If it is freely available (e.g., Aozora Bunko),
-        please include the URL so it can be reproduced. Write "N/A" if not book-specific.
-      placeholder: "e.g., 三四郎 — https://www.aozora.gr.jp/..."
+        Which book triggers the issue? If freely available (e.g., Aozora Bunko), include the URL.
+        Write "N/A" if not book-specific.
+        再現に使える EPUB の URL も書いてください。
+      placeholder: "e.g., 三四郎 — https://www.aozora.gr.jp/cards/000148/card794.html"
+    validations:
+      required: true
+
+  - type: input
+    id: location-in-epub
+    attributes:
+      label: "Location in EPUB / 発生箇所"
+      description: >-
+        Page numbers vary with font size, so please give chapter title, section heading, or the
+        first few characters of the problematic line. Or paste a screenshot below.
+        ページ番号はフォント設定で変わるため、章名・節名・問題の行頭の数文字などを書いてください。
+      placeholder: "e.g., 第二章 冒頭の「三四郎は……」/ Chapter 2, first paragraph"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: spec-category
+    attributes:
+      label: "Which aspect of vertical text? / 縦書きのどの側面ですか？"
+      description: Helps triage. Pick the closest match.
+      options:
+        - Glyph orientation (字形の向き — 「、 etc.)
+        - Character spacing / kerning (字間・JFM)
+        - Line breaking / kinsoku (改行・禁則)
+        - Ruby (ルビ)
+        - Page layout / columns (ページ・段組み)
+        - Text selection / highlight (選択・ハイライト)
+        - UI / footer / progress (UI・フッター)
+        - Crash / freeze (クラッシュ・フリーズ)
+        - Other / 不明
     validations:
       required: true
 
   - type: textarea
     id: issue-description
     attributes:
-      label: Issue description
-      description: Describe what is wrong and what you expected. Screenshots are very helpful.
+      label: "Issue description / 問題の説明"
+      description: >-
+        Describe what is wrong and what you expected. **Screenshots are essential for any
+        rendering/display issue** — please drag-and-drop one if possible.
+        表示の問題はスクリーンショットがほぼ必須です。
       placeholder: |
-        Expected: <what should happen>
-        Actual:   <what actually happens>
+        Expected / 期待される動作:
+        Actual / 実際の動作:
     validations:
       required: true
 
   - type: textarea
     id: reproduction-steps
     attributes:
-      label: Steps to reproduce
+      label: "Steps to reproduce / 再現手順"
       value: |
         1.
         2.
@@ -119,10 +187,26 @@ body:
       required: true
 
   - type: textarea
+    id: crash-log
+    attributes:
+      label: "crash.log (if applicable) / クラッシュログ（該当する場合）"
+      description: |
+        Location / 保存場所:
+        - Kindle:  `koreader/crash.log` (in the koreader install directory)
+        - Kobo:    `.adds/koreader/crash.log`
+        - Android: `Internal storage/koreader/crash.log`
+        - Linux:   `~/.config/koreader/crash.log`
+        Paste the last ~50 lines, or attach the whole file.
+        末尾 50 行程度を貼り付けるか、ファイルごと添付してください。
+      render: text
+    validations:
+      required: false
+
+  - type: textarea
     id: additional-information
     attributes:
-      label: Additional information
-      description: Crash logs, screenshots, or any other context
-      placeholder: Paste crash.log contents or drag-and-drop files here
+      label: "Additional information / 補足"
+      description: "Screenshots, other context. / スクリーンショットその他。"
+      placeholder: "Drag-and-drop screenshots here / ここにドラッグ＆ドロップ"
     validations:
       required: false
