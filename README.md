@@ -97,7 +97,7 @@ The following plugins have soft-forks tuned for this fork's vertical-rl mode:
   [AndyHazz/bookends.koplugin](https://github.com/AndyHazz/bookends.koplugin) with
   vertical-rl auto-detection so progress bars fill right→left in tategumi documents.
 
-## Advanced: switching from vanilla KOReader
+## Switching from vanilla KOReader
 
 If you already have vanilla KOReader installed, you can switch to this fork without
 reinstalling from scratch:
@@ -226,7 +226,7 @@ upstream の安定版ではなく **nightly** 相当です。サードパーテ�
   フォークし、縦書きドキュメントで進捗バーが右→左に進むよう vertical-rl
   を自動検出します。
 
-## 上級: vanilla KOReader からの移行
+## vanilla KOReader からの移行
 
 既に vanilla KOReader をインストール済みの場合、再インストールせずに
 本フォークへ切り替えられます:
