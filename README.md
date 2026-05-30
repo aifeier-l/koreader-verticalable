@@ -84,9 +84,10 @@ The override is saved per-book and will not be overwritten on subsequent opens.
 ## Compatibility
 
 This fork tracks upstream KOReader master, so its base is equivalent to upstream
-**nightly**, not the stable release. If a third-party plugin does not work, please
-verify it also fails with vanilla upstream KOReader nightly before filing an issue
-here — plugin breakage that also occurs upstream is out of scope for this fork.
+**nightly**, not the stable release. Reports about third-party plugins are welcome
+even without upstream verification, but noting whether the issue also reproduces in
+vanilla upstream KOReader nightly helps triage — plugin breakage that also occurs
+upstream is out of scope for this fork.
 
 ### Plugins with vertical-rl support
 
@@ -212,9 +213,10 @@ RTL が検出されると通知が表示され、ページめくり方向が反�
 ## 互換性
 
 本フォークは upstream KOReader の master を追従しているため、その基盤は
-upstream の安定版ではなく **nightly** 相当です。サードパーティプラグインが
-動作しない場合は、まず本家 upstream KOReader nightly でも同様に動作しないか
-ご確認ください。upstream でも壊れているプラグインは本フォークの対象外です。
+upstream の安定版ではなく **nightly** 相当です。サードパーティプラグインの
+不具合報告は、upstream での検証なしでも歓迎します。ただし本家 upstream
+KOReader nightly でも同様に再現するか併記いただけると振り分けに役立ちます
+— upstream でも壊れているプラグインは本フォークの対象外です。
 
 ### vertical-rl 対応プラグイン
 
