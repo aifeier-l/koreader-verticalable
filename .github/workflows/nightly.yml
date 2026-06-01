@@ -21,8 +21,45 @@ env:
 
 jobs:
 
+  check-changes:
+    name: Check for source changes
+    runs-on: ubuntu-latest
+    outputs:
+      should_build: ${{ steps.check.outputs.should_build }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check changes since last nightly
+        id: check
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Manual trigger — building unconditionally."
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git fetch origin --tags --quiet
+          LAST=$(git rev-list -1 nightly 2>/dev/null || echo "")
+          if [ -z "$LAST" ]; then
+            echo "No previous nightly tag — building."
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          CHANGED=$(git diff --name-only "$LAST" HEAD -- \
+            frontend/ plugins/ base Makefile CMakeLists.txt kodev resources/)
+          if [ -n "$CHANGED" ]; then
+            echo "Source changes detected:"
+            echo "$CHANGED"
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No source changes since last nightly — skipping build."
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+          fi
+
   kindle:
     name: Kindle
+    needs: check-changes
+    if: needs.check-changes.outputs.should_build == 'true'
     runs-on: ubuntu-latest
     container:
       image: koreader/kokindle:latest
@@ -52,6 +89,8 @@ jobs:
 
   kindlehf:
     name: Kindle (HF)
+    needs: check-changes
+    if: needs.check-changes.outputs.should_build == 'true'
     runs-on: ubuntu-latest
     container:
       image: koreader/kokindle:latest
@@ -81,6 +120,8 @@ jobs:
 
   kindlepw2:
     name: Kindle (PW2/non-HF)
+    needs: check-changes
+    if: needs.check-changes.outputs.should_build == 'true'
     runs-on: ubuntu-latest
     container:
       image: koreader/kokindle:latest
@@ -110,6 +151,8 @@ jobs:
 
   kobo:
     name: Kobo
+    needs: check-changes
+    if: needs.check-changes.outputs.should_build == 'true'
     runs-on: ubuntu-latest
     container:
       image: koreader/kokobo:latest
@@ -139,6 +182,8 @@ jobs:
 
   pocketbook:
     name: PocketBook
+    needs: check-changes
+    if: needs.check-changes.outputs.should_build == 'true'
     runs-on: ubuntu-latest
     container:
       image: koreader/kopb:latest
@@ -168,6 +213,8 @@ jobs:
 
   cervantes:
     name: Cervantes
+    needs: check-changes
+    if: needs.check-changes.outputs.should_build == 'true'
     runs-on: ubuntu-latest
     container:
       image: koreader/kocervantes:latest
@@ -197,6 +244,8 @@ jobs:
 
   remarkable:
     name: reMarkable (armhf)
+    needs: check-changes
+    if: needs.check-changes.outputs.should_build == 'true'
     runs-on: ubuntu-latest
     container:
       image: koreader/koremarkable:latest
@@ -226,6 +275,8 @@ jobs:
 
   remarkable-aarch64:
     name: reMarkable (aarch64)
+    needs: check-changes
+    if: needs.check-changes.outputs.should_build == 'true'
     runs-on: ubuntu-latest
     container:
       image: koreader/koremarkable:latest
@@ -255,6 +306,8 @@ jobs:
 
   android-arm:
     name: Android (ARM)
+    needs: check-changes
+    if: needs.check-changes.outputs.should_build == 'true'
     runs-on: ubuntu-latest
     container:
       image: koreader/koandroid:latest
@@ -293,6 +346,8 @@ jobs:
 
   android-arm64:
     name: Android (ARM64)
+    needs: check-changes
+    if: needs.check-changes.outputs.should_build == 'true'
     runs-on: ubuntu-latest
     container:
       image: koreader/koandroid:latest
@@ -330,7 +385,8 @@ jobs:
 
   publish:
     name: Publish Nightly
-    needs: [kindle, kindlehf, kindlepw2, kobo, pocketbook, cervantes, remarkable, remarkable-aarch64, android-arm, android-arm64]
+    needs: [check-changes, kindle, kindlehf, kindlepw2, kobo, pocketbook, cervantes, remarkable, remarkable-aarch64, android-arm, android-arm64]
+    if: needs.check-changes.outputs.should_build == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write

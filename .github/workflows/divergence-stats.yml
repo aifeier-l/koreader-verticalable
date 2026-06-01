@@ -5,7 +5,12 @@ name: Fork divergence stats
 
 on:
   schedule:
-    - cron: '15 0 * * *'  # Nightly, after sync-upstream
+    - cron: '15 0 * * 0'  # Weekly (Sunday), after sync-upstream
+  workflow_run:
+    workflows: ["Sync from upstream koreader"]
+    types: [completed]
+  push:
+    branches: [master]
   workflow_dispatch:
   pull_request:
     paths:
