@@ -819,7 +819,6 @@ local VirtualKeyboard = FocusManager:extend{
         he = "he_keyboard",
         hu = "hu_keyboard",
         ja = "ja_keyboard",
-        js = "ja_skk_keyboard",
         ka = "ka_keyboard",
         ko_KR = "ko_KR_keyboard",
         nb_NO = "no_keyboard",
@@ -840,7 +839,6 @@ local VirtualKeyboard = FocusManager:extend{
 
     lang_has_submenu = {
         ja = true,
-        js = true,
         zh = true,
         zh_CN = true,
     },
