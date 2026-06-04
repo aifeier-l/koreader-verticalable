@@ -706,7 +706,7 @@ function ReaderView:drawHighlightRect(bb, _x, _y, rect, drawer, color, draw_note
         end
         local is_vertical = self.document and self.document.isVerticalText and self.document:isVerticalText()
         if is_vertical then
-            -- In vertical-rl, draw a 傍線 (sideline) on the right edge of the column
+            -- In vertical-rl, draw a bousen (sideline) on the right edge of the column
             -- (the "before" / annotation side), running the full selection height.
             if Blitbuffer.isColor8(color) then
                 bb:paintRect(x + w - Size.line.thick, y, Size.line.thick, h, color)
