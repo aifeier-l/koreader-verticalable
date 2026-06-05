@@ -56,7 +56,7 @@ describe("Vertical-rl word->x vs vert_min_next_x drift", function()
         if not epub_path then pending("sanshiro.epub not found"); return end
 
         local total_pages = doc:getPageCount()
-        local pages_to_visit = math.min(total_pages, 30)
+        local pages_to_visit = math.min(total_pages, 100)
         local sw, sh = Screen:getWidth(), Screen:getHeight()
 
         local grand_count, grand_max_abs, grand_sum = 0, 0, 0
