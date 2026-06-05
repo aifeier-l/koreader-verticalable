@@ -1745,16 +1745,23 @@ function ReaderHighlight:onHoldPan(_, ges)
         end
         local is_in_prev_page_corner, is_in_next_page_corner
         if is_vertical then
-            -- Vertical-rl: natural selection endpoints are top-right (page
-            -- start) and bottom-left (page end = last column).  Using those
-            -- as scroll corners would cancel large selections, so we pick the
-            -- two opposite corners instead: top-left → next page, bottom-right
-            -- → prev page.  The user pans to a corner that is NOT on the
-            -- natural reading path to trigger a page switch.
-            is_in_next_page_corner = self.holdpan_pos.y < 1/8*self.screen_h
-                                      and self.holdpan_pos.x < 1/8*self.screen_w
-            is_in_prev_page_corner = self.holdpan_pos.y > 7/8*self.screen_h
-                                      and self.holdpan_pos.x > 7/8*self.screen_w
+            -- Vertical-rl: within a column text flows top-down; across
+            -- columns it flows right-to-left.  Page start = top-right,
+            -- page end = bottom-left.  Map page-switch corners to the
+            -- direction the user is reaching past the page boundary:
+            --   bottom-left → next page (past the page-end direction)
+            --   top-right   → previous page (back toward the page-start)
+            -- Use the raw screen-space `ges.pos` rather than
+            -- `self.holdpan_pos`: the latter has been through
+            -- screenToPageTransform, which in vertical-rl swaps axes
+            -- (pos.x ≈ screen_y, pos.y ≈ page_right − screen_x), so
+            -- comparing against screen_w / screen_h would mix dimensions
+            -- and (per measurement on PW2 758×1024) make the prev-page
+            -- condition unsatisfiable.
+            is_in_next_page_corner = ges.pos.y > 7/8*self.screen_h
+                                      and ges.pos.x < 1/8*self.screen_w
+            is_in_prev_page_corner = ges.pos.y < 1/8*self.screen_h
+                                      and ges.pos.x > 7/8*self.screen_w
         elseif mirrored_reading then
             -- Note: this might not be really usable, as crengine native selection
             -- is not adapted to RTL text
