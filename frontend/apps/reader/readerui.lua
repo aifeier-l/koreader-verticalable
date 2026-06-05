@@ -967,7 +967,7 @@ function ReaderUI:reloadDocument(after_close_callback, seamless, after_open_call
     self:showReader(file, provider, seamless, nil, after_open_callback)
 end
 
-function ReaderUI:switchDocument(new_file, seamless, after_open_callback)
+function ReaderUI:switchDocument(new_file, seamless, after_open_callback, provider, is_provider_forced)
     if not new_file then return end
 
     -- Mimic onShowingReader's refresh optimizations
@@ -979,11 +979,11 @@ function ReaderUI:switchDocument(new_file, seamless, after_open_callback)
     self.highlight:onClose() -- close highlight dialog if any
     self:onClose(false)
 
-    self:showReader(new_file, nil, seamless, nil, after_open_callback)
+    self:showReader(new_file, provider, seamless, is_provider_forced, after_open_callback)
 end
 
 function ReaderUI:onOpenLastDoc()
-    self:switchDocument(self.menu:getPreviousFile())
+    filemanagerutil.openFile(self, self.menu:getPreviousFile())
 end
 
 function ReaderUI:onAnnotationsModified()
