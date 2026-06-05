@@ -1795,12 +1795,36 @@ function ReaderHighlight:onHoldPan(_, ges)
             end
             self.was_in_some_corner = true
             if self.ui.document:getVisiblePageCount() == 1 then -- single page mode
-                -- We'll adjust hold_pos after the mode switch and the scroll
-                -- so it's accurate in the new screen coordinates.  In vertical-rl
-                -- the axis that moves with corner-scroll is screen_x (column
-                -- progression on screen) not screen_y, so we need both return
-                -- values from getScreenPositionFromXPointer (it returns y, x).
-                local orig_y, orig_x = self.ui.document:getScreenPositionFromXPointer(self.selected_text_start_xpointer)
+                if is_vertical then
+                    -- Vertical-rl: SCROLL view mode is not properly rendered
+                    -- in crengine (DrawDocument in DVM_SCROLL stacks erm_final
+                    -- blocks vertically as if horizontal text, so columns end
+                    -- up running TOP-DOWN on screen instead of right-to-left,
+                    -- and even after _gotoPos(currentPos + screen_w/3) the
+                    -- displayed page index does not change — the user sees
+                    -- the same content and concludes the corner-scroll did
+                    -- nothing).  Replace the SCROLL trick with a discrete
+                    -- _gotoPage jump; the multi-page selection extension is
+                    -- then handled in the section below by overriding pos0
+                    -- with selected_text_start_xpointer (the original press
+                    -- xpointer is off-screen after the jump but stays as the
+                    -- selection anchor).
+                    local cur_page = self.ui.document:getCurrentPage(true)
+                    local restore_page_mode_xpointer = self.ui.document:getXPointer()
+                    self.restore_page_mode_func = function()
+                        self.ui.rolling:onGotoXPointer(restore_page_mode_xpointer, self.selected_text_start_xpointer)
+                    end
+                    if is_in_next_page_corner then
+                        self.ui.rolling:_gotoPage(cur_page + 1, true, true)
+                    else
+                        self.ui.rolling:_gotoPage(cur_page - 1, true, true)
+                    end
+                    UIManager:setDirty(self.dialog, "ui")
+                    return true
+                end
+                -- We'll adjust hold_pos.y after the mode switch and the scroll
+                -- so it's accurate in the new screen coordinates
+                local orig_y = self.ui.document:getScreenPositionFromXPointer(self.selected_text_start_xpointer)
                 if self.view.view_mode ~= "scroll" then
                     -- Switch from page mode to scroll mode
                     local restore_page_mode_xpointer = self.ui.document:getXPointer() -- top of current page
@@ -1811,22 +1835,11 @@ function ReaderHighlight:onHoldPan(_, ges)
                     self.ui:handleEvent(Event:new("SetViewMode", "scroll"))
                 end
                 -- (using rolling:onGotoViewRel(1/3) has some strange side effects)
-                -- In vertical-rl, the document Y axis is column progression
-                -- (perpendicular to screen_h), so scroll along screen_w instead.
-                local scroll_axis = is_vertical and self.screen_w or self.screen_h
-                local scroll_distance = math.floor(scroll_axis * 1/3)
+                local scroll_distance = math.floor(self.screen_h * 1/3)
                 local move_y = is_in_next_page_corner and scroll_distance or -scroll_distance
                 self.ui.rolling:_gotoPos(self.ui.document:getCurrentPos() + move_y)
-                local new_y, new_x = self.ui.document:getScreenPositionFromXPointer(self.selected_text_start_xpointer)
-                if is_vertical then
-                    -- Vertical-rl: the start xpointer's screen_x moves with _pos
-                    -- (column progression direction).  screen_y is roughly constant
-                    -- across scroll, so adjust hold_pos.x instead of hold_pos.y to
-                    -- keep the selection anchored to the same content.
-                    self.hold_pos.x = self.hold_pos.x - orig_x + new_x
-                else
-                    self.hold_pos.y = self.hold_pos.y - orig_y + new_y
-                end
+                local new_y = self.ui.document:getScreenPositionFromXPointer(self.selected_text_start_xpointer)
+                self.hold_pos.y = self.hold_pos.y - orig_y + new_y
                 UIManager:setDirty(self.dialog, "ui")
                 return true
             else -- two pages mode
@@ -1895,6 +1908,33 @@ function ReaderHighlight:onHoldPan(_, ges)
             -- and spans quite some height, the marker could point away
             -- from the start position)
             self.selected_text_start_xpointer = self.selected_text.pos0
+        end
+    end
+
+    -- Vertical-rl multi-page corner-scroll: after a discrete _gotoPage jump
+    -- (see the single-page branch above), the original press's hold_pos no
+    -- longer maps to its source xpointer — it was on the now-invisible
+    -- previous page.  The getTextFromPositions call above therefore returned
+    -- a range bounded by current-page positions only, losing the multi-page
+    -- extent.  Re-anchor the selection start with the original press
+    -- xpointer (still tracked in self.selected_text_start_xpointer) and
+    -- recompute text + sboxes from that anchor to the finger end.
+    if is_vertical and self.ui.rolling and self.restore_page_mode_func
+            and self.selected_text and self.selected_text.pos1
+            and self.selected_text_start_xpointer then
+        local sx = self.selected_text_start_xpointer
+        local cur = self.selected_text.pos1
+        if sx ~= cur then
+            local pos0, pos1
+            if self.ui.document:compareXPointers(sx, cur) == 1 then
+                pos0, pos1 = sx, cur   -- sx precedes cur in doc order
+            else
+                pos0, pos1 = cur, sx
+            end
+            self.selected_text.pos0 = pos0
+            self.selected_text.pos1 = pos1
+            self.selected_text.text  = self.ui.document:getTextFromXPointers(pos0, pos1, true)
+            self.selected_text.sboxes = self.ui.document:getScreenBoxesFromPositions(pos0, pos1, true)
         end
     end
 
