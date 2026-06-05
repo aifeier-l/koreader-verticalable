@@ -1795,9 +1795,12 @@ function ReaderHighlight:onHoldPan(_, ges)
             end
             self.was_in_some_corner = true
             if self.ui.document:getVisiblePageCount() == 1 then -- single page mode
-                -- We'll adjust hold_pos.y after the mode switch and the scroll
-                -- so it's accurate in the new screen coordinates
-                local orig_y = self.ui.document:getScreenPositionFromXPointer(self.selected_text_start_xpointer)
+                -- We'll adjust hold_pos after the mode switch and the scroll
+                -- so it's accurate in the new screen coordinates.  In vertical-rl
+                -- the axis that moves with corner-scroll is screen_x (column
+                -- progression on screen) not screen_y, so we need both return
+                -- values from getScreenPositionFromXPointer (it returns y, x).
+                local orig_y, orig_x = self.ui.document:getScreenPositionFromXPointer(self.selected_text_start_xpointer)
                 if self.view.view_mode ~= "scroll" then
                     -- Switch from page mode to scroll mode
                     local restore_page_mode_xpointer = self.ui.document:getXPointer() -- top of current page
@@ -1814,8 +1817,16 @@ function ReaderHighlight:onHoldPan(_, ges)
                 local scroll_distance = math.floor(scroll_axis * 1/3)
                 local move_y = is_in_next_page_corner and scroll_distance or -scroll_distance
                 self.ui.rolling:_gotoPos(self.ui.document:getCurrentPos() + move_y)
-                local new_y = self.ui.document:getScreenPositionFromXPointer(self.selected_text_start_xpointer)
-                self.hold_pos.y = self.hold_pos.y - orig_y + new_y
+                local new_y, new_x = self.ui.document:getScreenPositionFromXPointer(self.selected_text_start_xpointer)
+                if is_vertical then
+                    -- Vertical-rl: the start xpointer's screen_x moves with _pos
+                    -- (column progression direction).  screen_y is roughly constant
+                    -- across scroll, so adjust hold_pos.x instead of hold_pos.y to
+                    -- keep the selection anchored to the same content.
+                    self.hold_pos.x = self.hold_pos.x - orig_x + new_x
+                else
+                    self.hold_pos.y = self.hold_pos.y - orig_y + new_y
+                end
                 UIManager:setDirty(self.dialog, "ui")
                 return true
             else -- two pages mode
