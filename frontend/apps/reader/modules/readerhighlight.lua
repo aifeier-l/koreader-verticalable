@@ -1760,10 +1760,14 @@ function ReaderHighlight:onHoldPan(_, ges)
             -- condition unsatisfiable.
             --
             -- Trigger zone: the L-shaped margin region outside the text
-            -- rendering area, in the relevant quadrant.  A flat 1/8-screen
-            -- box overlaps the leftmost / rightmost columns and the first /
-            -- last lines, hijacking ordinary selection drags that ride
-            -- along a column edge.  Constrain to the outer margins instead.
+            -- rendering area, covering 80% of the no-text strips in the
+            -- relevant quadrant.  A flat 1/8-screen box overlaps the
+            -- leftmost / rightmost columns and the first / last lines,
+            -- hijacking selection drags that ride along a column edge.
+            -- Constrain to the outer margins; leave the 20% nearest the
+            -- opposite-direction corner as a neutral band so a drag toward
+            -- (say) the bottom-right doesn't accidentally also satisfy the
+            -- next-page predicate.
             local doc_margins = self.ui.document:getPageMargins()
             local header_h = self.ui.document.getHeaderHeight
                 and self.ui.document:getHeaderHeight() or 0
@@ -1772,11 +1776,11 @@ function ReaderHighlight:onHoldPan(_, ges)
             local text_top    = doc_margins["top"] + header_h
             local text_bottom = self.screen_h - doc_margins["bottom"]
             is_in_next_page_corner =
-                   (ges.pos.y > text_bottom and ges.pos.x < self.screen_w / 2)
-                or (ges.pos.x < text_left   and ges.pos.y > self.screen_h / 2)
+                   (ges.pos.y > text_bottom and ges.pos.x < self.screen_w * 7/10)
+                or (ges.pos.x < text_left   and ges.pos.y > self.screen_h * 3/10)
             is_in_prev_page_corner =
-                   (ges.pos.y < text_top    and ges.pos.x > self.screen_w / 2)
-                or (ges.pos.x > text_right  and ges.pos.y < self.screen_h / 2)
+                   (ges.pos.y < text_top    and ges.pos.x > self.screen_w * 3/10)
+                or (ges.pos.x > text_right  and ges.pos.y < self.screen_h * 7/10)
         elseif mirrored_reading then
             -- Note: this might not be really usable, as crengine native selection
             -- is not adapted to RTL text
