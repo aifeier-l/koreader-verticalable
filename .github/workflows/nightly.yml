@@ -26,6 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       should_build: ${{ steps.check.outputs.should_build }}
+      nightly_version: ${{ steps.version.outputs.nightly_version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -55,6 +56,12 @@ jobs:
             echo "No source changes since last nightly — skipping build."
             echo "should_build=false" >> "$GITHUB_OUTPUT"
           fi
+      - name: Compute nightly version
+        id: version
+        # Shared across all build/publish jobs so the embedded git-rev and the
+        # OTA zsync Filename header agree. Otherwise OTAManager parses two
+        # different version strings and offers an update on every check.
+        run: echo "nightly_version=v$(date -u +%Y.%m.%d)" >> "$GITHUB_OUTPUT"
 
   kindle:
     name: Kindle
@@ -66,6 +73,7 @@ jobs:
     env:
       BASH_ENV: /home/ko/.bashrc
       TARGET: kindle
+      RELEASE_TAG: ${{ needs.check-changes.outputs.nightly_version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -97,6 +105,7 @@ jobs:
     env:
       BASH_ENV: /home/ko/.bashrc
       TARGET: kindlehf
+      RELEASE_TAG: ${{ needs.check-changes.outputs.nightly_version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -128,6 +137,7 @@ jobs:
     env:
       BASH_ENV: /home/ko/.bashrc
       TARGET: kindlepw2
+      RELEASE_TAG: ${{ needs.check-changes.outputs.nightly_version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -159,6 +169,7 @@ jobs:
     env:
       BASH_ENV: /home/ko/.bashrc
       TARGET: kobo
+      RELEASE_TAG: ${{ needs.check-changes.outputs.nightly_version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -190,6 +201,7 @@ jobs:
     env:
       BASH_ENV: /home/ko/.bashrc
       TARGET: pocketbook
+      RELEASE_TAG: ${{ needs.check-changes.outputs.nightly_version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -221,6 +233,7 @@ jobs:
     env:
       BASH_ENV: /home/ko/.bashrc
       TARGET: cervantes
+      RELEASE_TAG: ${{ needs.check-changes.outputs.nightly_version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -252,6 +265,7 @@ jobs:
     env:
       BASH_ENV: /home/ko/.bashrc
       TARGET: remarkable
+      RELEASE_TAG: ${{ needs.check-changes.outputs.nightly_version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -283,6 +297,7 @@ jobs:
     env:
       BASH_ENV: /home/ko/.bashrc
       TARGET: remarkable-aarch64
+      RELEASE_TAG: ${{ needs.check-changes.outputs.nightly_version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -315,6 +330,7 @@ jobs:
       BASH_ENV: /home/ko/.bashrc
       TARGET: android
       ANDROID_ARCH: arm
+      RELEASE_TAG: ${{ needs.check-changes.outputs.nightly_version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -355,6 +371,7 @@ jobs:
       BASH_ENV: /home/ko/.bashrc
       TARGET: android
       ANDROID_ARCH: arm64
+      RELEASE_TAG: ${{ needs.check-changes.outputs.nightly_version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -398,7 +415,10 @@ jobs:
           fetch-depth: 0
 
       - name: Set nightly version (YYYY.MM.DD)
-        run: echo "NIGHTLY_VERSION=v$(date -u +%Y.%m.%d)" >> $GITHUB_ENV
+        # Use the version computed in check-changes so we agree with what the
+        # build jobs embedded via RELEASE_TAG (otherwise OTA Filename and the
+        # tarball's git-rev would diverge if the build crossed UTC midnight).
+        run: echo "NIGHTLY_VERSION=${{ needs.check-changes.outputs.nightly_version }}" >> $GITHUB_ENV
 
       - uses: actions/download-artifact@v4
         with:
