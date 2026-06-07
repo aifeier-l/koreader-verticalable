@@ -351,6 +351,7 @@ bool LVDocView::isVerticalText() const {
 | Column bottom clipping fix: glyphs at column end no longer clipped | `lvtextfm.cpp` |
 | sbox screen_y offset (P5): `windowToDocPoint`/`docToWindowPoint` account for `clip.top` | `lvdocview.cpp` |
 | Character overlap fix (上にめり込む): `vert_min_next_x` correctly prevents overlap | `lvtextfm.cpp` |
+| Enclosed Alphanumerics (U+2460-24FF / ①②③) classified as CJK so they render upright in their em column via the JFM vertical path. Without this they fell into `word_is_latin_in_vertical` (render+rotate); the rotated buffer is `font_h` wide so the rightmost column overflows by `(font_h − em) / 2` px, clipping the glyph on high-DPI devices (PW2 etc.) | `include/lvstring.h` |
 
 **Note on whitespace**: some EPUBs have U+0020 spaces adjacent to ruby groups (e.g. `と Nachbild《…》 という`). These render as narrow gaps proportional to the space glyph's advance width (≈ ¼ em). This is expected — the space is in the EPUB source.
 
