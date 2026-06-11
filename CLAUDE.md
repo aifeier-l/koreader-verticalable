@@ -361,15 +361,15 @@ bool LVDocView::isVerticalText() const {
 | sbox screen_y offset (P5): `windowToDocPoint`/`docToWindowPoint` account for `clip.top` | `lvdocview.cpp` |
 | Character overlap fix (上にめり込む): `vert_min_next_x` correctly prevents overlap | `lvtextfm.cpp` |
 | Enclosed Alphanumerics (U+2460-24FF / ①②③) classified as CJK so they render upright in their em column via the JFM vertical path. Without this they fell into `word_is_latin_in_vertical` (render+rotate); the rotated buffer is `font_h` wide so the rightmost column overflows by `(font_h − em) / 2` px, clipping the glyph on high-DPI devices (PW2 etc.) | `include/lvstring.h` |
+| Float / inline-block image wrapping: vertical mode reuses `BlockFloatFootprint` with swapped semantics, so columns intersecting a floated image start after the image's in-column exclusion instead of drawing text underneath it or reserving a full in-flow column band | `lvrend.cpp`, `lvtextfm.cpp`, `lvtextfm_vert.cpp`, `vertical_float_image_spec.lua` |
 
 **Note on whitespace**: some EPUBs have U+0020 spaces adjacent to ruby groups (e.g. `と Nachbild《…》 という`). These render as narrow gaps proportional to the space glyph's advance width (≈ ¼ em). This is expected — the space is in the EPUB source.
 
 ## Open Issues
 
-### P6 — Per-element writing mode, floats (low priority)
+### P6 — Per-element writing mode (low priority)
 
 - Mixed horizontal/vertical blocks within one document
-- Floats in vertical mode (currently disabled)
 
 ## Key File Locations
 
