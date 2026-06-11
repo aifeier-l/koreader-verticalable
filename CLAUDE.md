@@ -13,6 +13,15 @@ to rebase onto upstream updates. Therefore:
   debug code or reorganize existing comments — this widens the diff for no gain.
 - **No debug code in commits**: Remove all diagnostic `fprintf(stderr, ...)`
   and similar instrumentation before committing.
+- **Spec-oracle counters are the one exception to the no-debug-code rule**:
+  the `ltext_vert_*` / `lvrend_*` / `s_ruby_*` counter families that are read
+  back by regression specs (bleed, char-overlap, ruby-diag, ruby-adv-diff,
+  ib-layout-gap) are legitimate test oracles and may stay. Counter families
+  that no spec consumes are debug code and must be removed (the `fmt_calls` /
+  `fmt_vert_calls` / `word_iters` / `fmt_draws` / `word_x_drift` groups were
+  deleted in the 2026-06-11 review pass). Do not add new ad-hoc counters, and
+  do not cite the spec oracles as precedent for doing so. Where practical, gate
+  the keepers so they only increment in vertical mode.
 - **Issues and PRs go to m-tky repos only**: Never open issues or PRs against
   upstream repositories (koreader/koreader, etc.) by mistake.
 - **All written communication in English**: Code, comments, commit messages,
