@@ -1,20 +1,10 @@
--- Bisect helper: detect ruby boxing SIGSEGV in crengine.
+-- Regression: ruby boxing must not SIGSEGV in vertical-rl mode.
 --
--- This spec is SKIPPED (pending) unless crash_ruby.epub exists at:
---   test/fixtures/vertical_text/crash_ruby.epub
---
--- crash_ruby.epub: minimal EPUB with <ruby>石<rt>いし</rt></ruby> and no
--- "ruby { display: inline }" CSS — triggers the boxing path that crashes.
---
--- Usage for git bisect (from base repo root):
---   git bisect start
---   git bisect bad HEAD                # current HEAD: crashes
---   git bisect good d2e19c9a           # last upstream commit: no crash
---   git bisect run \
---       tests/fixtures/vertical_text/bisect-ruby-crash.sh
---   git bisect reset
+-- crash_ruby.epub is a minimal EPUB with <ruby>石<rt>いし</rt></ruby> and no
+-- "ruby { display: inline }" CSS — it exercises the boxing path that used to
+-- crash crengine when re-rendered with writing-mode: vertical-rl.
 
-describe("Ruby boxing bisect", function()
+describe("Vertical ruby crash", function()
     local DocumentRegistry, ReaderUI, UIManager, Screen
 
     setup(function()
@@ -30,10 +20,7 @@ describe("Ruby boxing bisect", function()
     it("opens crash_ruby.epub with vertical-rl CSS without SIGSEGV", function()
         local epub = "spec/front/unit/data/fixtures/vertical_text/crash_ruby.epub"
         local f = io.open(epub, "rb")
-        if not f then
-            pending("crash_ruby.epub absent — skipped in normal test runs")
-            return
-        end
+        assert.truthy(f, "crash_ruby.epub fixture missing from test-data submodule")
         f:close()
 
         local readerui = ReaderUI:new{
