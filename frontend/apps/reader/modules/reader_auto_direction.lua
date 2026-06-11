@@ -52,11 +52,10 @@ end
 
 -- Recompute and apply the combined progress-bar inversion.
 -- Called after auto-detection so the bar reflects the updated reading order.
+-- Delegates to ReaderView's single helper so the inversion logic (mirrored UI /
+-- RTL reading order / vertical-rl) lives in exactly one place.
 function ReaderAutoDirection:_syncProgressBar()
-    if not self.view.footer then return end
-    local is_rtl = self.view.inverse_reading_order ~= BD.mirroredUILayout()
-    local invert = self.view.invert_ui_layout or is_rtl
-    self.view.footer:invertProgressBar(invert)
+    self.view:syncProgressBarDirection()
 end
 
 return ReaderAutoDirection

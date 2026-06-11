@@ -351,6 +351,11 @@ function ReaderRolling:onReaderReady()
     -- Always enforce these on open regardless of any previously saved value.
     if self.ui.document:isVerticalText() then
         self.view.inverse_reading_order = true
+        -- Mark this as a forced value (not a user choice), so ReaderView's
+        -- onSaveSettings does not persist it: if the book later renders
+        -- horizontal (style tweak removed / Embedded Styles off), a persisted
+        -- RTL page-turn would stick with no reset path.
+        self.view.inverse_reading_order_forced = true
         if self.view.view_mode ~= "page" then
             self.ui:handleEvent(Event:new("SetViewMode", "page"))
         end

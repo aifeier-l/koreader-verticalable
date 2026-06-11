@@ -2413,11 +2413,12 @@ function ReaderFooter:onReaderReady()
     if self.ui.rolling then
         self.pages = self.ui.document:getPageCount()
     end
-    -- For vertical-rl documents, invert the progress bar direction so that
-    -- both the fill bar and TOC chapter tick marks mirror to fill from the
-    -- right (matching right-to-left reading direction: page 1 = rightmost).
-    if self.ui.document.isVerticalText and self.ui.document:isVerticalText() then
-        self.progress_bar.invert_direction = true
+    -- Progress bar direction (incl. vertical-rl fill-from-right + mirrored TOC
+    -- ticks) is owned by ReaderView:syncProgressBarDirection(); route through it
+    -- instead of poking progress_bar.invert_direction directly so all writers
+    -- stay consistent.
+    if self.view and self.view.syncProgressBarDirection then
+        self.view:syncProgressBarDirection()
     end
     if not self.ui.document:hasHiddenFlows() then -- otherwise will be done in the first onPageUpdate()
         self:setTocMarkers()
