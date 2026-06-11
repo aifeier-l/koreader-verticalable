@@ -1,22 +1,21 @@
 --[[--
 Vertical-rl float image overlap regression.
 
-A CSS `float` element has no positioning implementation for vertical writing
-modes (the float placement math is all horizontal-axis), so a floated
-illustration used to be drawn on top of the column text — the body text ended
-up hidden behind the image (e.g. Momo's div.leftfig laundry illustration).
+A CSS `float` element used to have no positioning implementation for vertical
+writing modes, so a floated illustration was either drawn on top of the column
+text or forced into a full in-flow column band.
 
-FIX (lvrend.cpp): in vertical mode floats are rendered as in-flow blocks, so
-the illustration occupies its own column band and the text flows in the
-neighbouring columns instead of being overdrawn.
+FIX: vertical mode reuses the float footprint machinery with swapped semantics:
+the float's X/width are the in-column screen-Y exclusion, and Y/height are the
+right-to-left column advance. Text columns that intersect the float start after
+the float's in-column exclusion and continue in the same screen-X band.
 
 Oracle: render the fixture (a float:left 360px-wide image between two text
 paragraphs) and look at the screen-X coverage of the selectable text.
-  - FIXED:  the image reserves its own ~360px column band, so the text boxes
-            leave a large screen-X gap (~image width) and ALL the body text is
-            present/selectable.
-  - BROKEN: the image overdraws the text columns, so most of the text is hidden
-            (only a sliver is selectable) and there is no reserved gap.
+  - FIXED:  all body text is present/selectable, and the text boxes do NOT leave
+            a full image-width screen-X gap because text wraps below the image.
+  - BROKEN: overdraw hides most of the body text, or the in-flow fallback leaves
+            a large reserved column band.
 
 Run via:
   ./kodev test front -f "Vertical text: float image"
@@ -58,7 +57,7 @@ describe("Vertical text: float image does not overlap text", function()
         end
     end)
 
-    it("reserves a column band for the float and keeps all text visible", function()
+    it("wraps text around the float and keeps all text visible", function()
         if not lfs.attributes(epub_path) then
             pending("float_image_test.epub fixture missing from test-data submodule")
             return
@@ -68,18 +67,22 @@ describe("Vertical text: float image does not overlap text", function()
             "fixture should render in vertical-rl")
 
         local sw, sh = Screen:getWidth(), Screen:getHeight()
-        local t = doc:getTextFromPositions({x=0, y=0}, {x=sw-1, y=sh-1}, true)
+        local t = doc:getTextFromPositions({x=sw-1, y=0}, {x=0, y=sh-1}, true)
         assert.is_truthy(t and t.text, "page should expose selectable text")
 
         -- All body text must remain selectable (not hidden behind the image).
-        -- The fixture body is ~356 chars; if the float overdrew the columns only
-        -- a small sliver (~70 chars) would be reachable.
+        -- If the float overdraws the columns only a small sliver (~70 chars)
+        -- is reachable with this fixture.
         assert.is_true(#t.text >= 300,
             "most body text is hidden behind the float image (got "..#t.text.." chars)")
 
-        -- The image must occupy its own screen-X band: the selectable text boxes
-        -- should leave a contiguous horizontal gap close to the image width
-        -- (360px). A float overdrawing the text leaves no such gap.
+        assert.matches("マーカーあとぶんしょうかいし", t.text,
+            "text after the floated image should be present on the page")
+
+        -- The image should no longer force its own full-height column band:
+        -- text wraps into the same screen-X band below the float, so selectable
+        -- text boxes should not leave a contiguous horizontal gap close to the
+        -- image width (360px). A pure in-flow fallback would leave that gap.
         local covered, minx, maxx = {}, math.huge, -math.huge
         for _, b in ipairs(t.sboxes or {}) do
             local x0, x1 = b.x, b.x + b.w
@@ -91,7 +94,7 @@ describe("Vertical text: float image does not overlap text", function()
         for x = math.floor(minx), math.ceil(maxx) do
             if covered[x] then gap = 0 else gap = gap + 1; if gap > largest_gap then largest_gap = gap end end
         end
-        assert.is_true(largest_gap >= 300,
-            "no reserved column band for the float image (largest text gap "..largest_gap.."px)")
+        assert.is_true(largest_gap < 300,
+            "float image did not wrap text into its column band (largest text gap "..largest_gap.."px)")
     end)
 end)
