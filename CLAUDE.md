@@ -4,34 +4,17 @@
 
 This project is a soft fork of koreader/koreader + koreader/koreader-base +
 crengine, maintained as m-tky/koreader-tategumi, m-tky/koreader-base, and
-m-tky/crengine. Upstreaming is not the goal, but the fork must remain easy
-to rebase onto upstream updates. Therefore:
+m-tky/crengine. Keep changes small, preserve upstream style, and make rebasing
+onto upstream updates easy.
 
-- **Minimal, targeted changes**: Modify only the functions and files necessary
-  for the fix. Preserve upstream style, naming conventions, and comment culture.
-- **Do not touch upstream code unnecessarily**: Do not clean up commented-out
-  debug code or reorganize existing comments — this widens the diff for no gain.
-- **No debug code in commits**: Remove all diagnostic `fprintf(stderr, ...)`
-  and similar instrumentation before committing.
-- **Spec-oracle counters are the one exception to the no-debug-code rule**:
-  the `ltext_vert_*` / `lvrend_*` / `s_ruby_*` counter families that are read
-  back by regression specs (bleed, char-overlap, ruby-diag, ruby-adv-diff,
-  ib-layout-gap) are legitimate test oracles and may stay. Counter families
-  that no spec consumes are debug code and must be removed (the `fmt_calls` /
-  `fmt_vert_calls` / `word_iters` / `fmt_draws` / `word_x_drift` groups were
-  deleted in the 2026-06-11 review pass). Do not add new ad-hoc counters, and
-  do not cite the spec oracles as precedent for doing so. Where practical, gate
-  the keepers so they only increment in vertical mode.
-- **Issues and PRs go to m-tky repos only**: Never open issues or PRs against
-  upstream repositories (koreader/koreader, etc.) by mistake.
-- **All written communication in English**: Code, comments, commit messages,
-  issues, PRs, and documentation must all be written in English.
-- **No pixel measurement of screenshots**: Never measure screenshot
-  dimensions / bounding boxes via ImageMagick `connected-components` or
-  similar.  Always confirm geometry via runtime log diagnostics (fprintf
-  to `/tmp/kr_*.log` using `static FILE *F`) instead.  Pixel measurements
-  on small low-DPI emulator screenshots are unreliable and have produced
-  wrong diagnoses in past sessions.
+- Keep fixes targeted; avoid unrelated cleanup.
+- Remove debug `fprintf(stderr, ...)` and similar instrumentation before commit.
+- The `ltext_vert_*` / `lvrend_*` / `s_ruby_*` counters used by specs are
+  allowed; do not add new ad-hoc counters.
+- Issues and PRs go to the m-tky repos only.
+- Write code, comments, commit messages, issues, PRs, and docs in English.
+- Do not use screenshot pixel measurements for geometry; confirm via runtime
+  logs instead.
 
 ## Project Goal
 
@@ -58,204 +41,32 @@ Test fixture: `spec/front/unit/data/fixtures/vertical_text/simple_ja_noruby.epub
 
 ## Architecture: Y=X Coordinate Swap
 
-The core design re-uses the existing horizontal rendering pipeline by swapping X and Y
-roles. All rendering stores horizontal column progression in the Y-axis fields so the
-page splitter (which splits on Y) naturally splits on columns.
+The vertical implementation reuses the horizontal pipeline by swapping X and Y
+roles. Column progression lives in the Y-axis fields, so page splitting and most
+layout code continue to work with minimal fork-only glue.
 
-### Coordinate mapping (doc space → screen)
-
-```
-doc_y  = page_y + (horizontal offset from right edge)  →  screen_x = page_right - (doc_y - page_y)
-doc_x  = vertical pixel position in column             →  screen_y = doc_x
-```
-
-```mermaid
-graph LR
-    subgraph doc["Formatter / Doc Space  (Y=X swapped)"]
-        FY["c_y / fmt.setY()\nblock-direction advance\n= column progression"]
-        FX["c_x / fmt.setX()\ninline-start\n= glyph position in column"]
-    end
-    subgraph draw["Draw() — after swap(x,y) at entry"]
-        LX["line_x = clip.right − x\ncolumn screen-X  (right → left)"]
-        LY["y + frmline->x + advance\nglyph screen-Y  (top → bottom)"]
-    end
-    FY -->|"→ x after swap"| LX
-    FX -->|"→ y after swap"| LY
-```
-
-### FlowState (lvrend.cpp)
-
-- `c_x` = accumulated horizontal advance (column progression)
-- `c_y` = same value as c_x for vertical (advanced in sync in `addContentLine`)
-- `l_x`, `l_y` = saved at `newBlockLevel`, both equal at each level entry
-- `page_h` is swapped to `page_width` at FlowState constructor for vertical mode
-- `context.AddLine(c_x, c_x+height, ...)` feeds horizontal offsets to page splitter
-
-### Block rendering (lvrend.cpp `renderBlockElementEnhanced`)
-
-```cpp
-fmt.setX( x );                              // inline-start margin (screen-Y offset)
-fmt.setY( flow->getCurrentRelativeY() );   // block-direction advance (screen-X offset)
-```
-
-`getCurrentRelativeY() = c_y - l_y == c_x - l_x` in vertical mode.
-
-### CSS Logical Properties (Option C)
-
-`lvlogical.h` provides `CSSLogical` struct mapping CSS physical property array indices
-to logical directions for vertical-rl:
-
-```cpp
-CSSLogical L(style->writing_mode);
-// inline-start = physical top (index 2) for vertical-rl
-padding_left = style->padding[L.padIS()];   // padding-top → inline-start
-// block-start  = physical right (index 1) for vertical-rl
-margin_top   = style->margin[L.marBS()];    // margin-right → block-start
-```
-
-This replaces hard-coded physical indices (0,1,2,3) throughout `renderBlockElementEnhanced`
-and `DrawDocument`, ensuring CSS padding/margin are applied in the correct directions.
-
-### Formatted text draw (lvtextfm.cpp `LFormattedText::Draw`)
-
-#### Entry and page-level call
-
-`drawPageTo` calls `DrawDocument(buf, root, draw_x0, draw_y0, ...)` with:
-- `draw_x0 = clip.top` (screen-Y origin of the text area)
-- `draw_y0 = 0` (block-direction origin: "column 0 starts at clip.right")
-
-DrawDocument eventually calls `f->Draw(buf, draw_x0, draw_y0, ...)`.
-
-At Draw() entry, x and y are swapped back to screen coordinates:
-```cpp
-if (is_vertical) { int tmp = x; x = y; y = tmp; }
-// After swap: x = draw_y0 = 0,  y = draw_x0 = clip.top
-int line_x = is_vertical ? (clip.right - x) : x;
-// line_x = clip.right - 0 = clip.right  (for page-level call)
-int line_y = y;  // = clip.top
-```
-
-#### Per-column drawing (frmlines)
-
-`line_x` starts at `clip.right` and decreases by `frmline->height` after each frmline.
-
-- Plain column: `frmline->height = strut_height`
-- Ruby-inflated column: `frmline->height = strut + annot_width`
-
-#### Plain character positioning
-
-```cpp
-x0 = line_x - frmline->height;          // left edge of column
-// Center on the column axis:
-if (em < strut) x0 += (strut - em) / 2; // (strut - em) / 2 centering
-y0 = y + frmline->x + clamped_x;        // screen Y = clip.top + indent + char advance
-// Glyph center = x0 + em/2 = line_x - strut/2  ✓
-```
-
-#### Inline box (ruby group) draw
-
-`doc_y_ib = −node_y` cancels the inline box's own `getY() = node_y`, so by the time
-DrawDocument reaches the ruby cells `doc_y` holds only the cell's own offset.
-`x0 = y + node_x + clamp_delta` positions the group's screen-Y start after the preceding
-character (clamping prevents overlap with the previous glyph's visual end).
-
-```mermaid
-flowchart TD
-    CALL["outer Draw() — on inline box word\nx0 = y + node_x + clamp_delta\ny0 = x + node_y\ndoc_x_ib = −node_x,  doc_y_ib = −node_y"]
-    L0["DrawDoc(inline_box)  getY()=node_y\ndoc_y = −node_y + node_y = 0"]
-    L2["DrawDoc(ruby_row)  getY()=0\ndoc_y = 0"]
-    L3a["DrawDoc(base_cell)  getY()=annot_width\ndoc_y = annot_width\nf→Draw(x0, y0+annot_width)\nline_x = clip.right − (node_y+annot_width)  ✓"]
-    L3b["DrawDoc(annot_cell)  getY()=0\ndoc_y = 0\nf→Draw(x0, y0)\nline_x = clip.right − node_y  ✓"]
-
-    CALL --> L0 --> L2
-    L2 --> L3a
-    L2 --> L3b
-```
-
-#### Ruby cell column positions (vertical-rl)
-
-For a ruby group with `node_y = N` (= accumulated column advance in block):
-
-| Cell | `cell.getY()` | `inner_line_x` | Glyph center |
-|------|--------------|----------------|--------------|
-| annotation | 0 | `clip.right − N` | annotation zone |
-| base text | `annot_width` | `clip.right − N − annot_width` | base text column |
-
-The base text column is `annot_width` to the left of `clip.right − N` (the annotation zone),
-which places it correctly: annotation occupies the inter-column space to the right of the base.
-
-#### Ruby column position
-
-`y0 = x + node_y` and `doc_y_ib = 0 − node_y` ensure each ruby group draws
-at the correct accumulated column advance `node_y`, not always at `clip.right − annot_width`.
-Regression test: `vertical_ruby_column_spec.lua`.
-
-#### Latin base text column depth
-
-`fmt.getWidth()` after `renderBlockElement` is TTB-based (≈ `char_count × font_size`)
-for Latin words rendered as a rotated block. The actual visual column depth is the
-horizontal advance of the word. Fix (lvtextfm.cpp `measureText`):
-
-```cpp
-// Collect horizontal advance via getCharWidth() during ruby cell scan
-base_horiz_advance_pre += base_font->getCharWidth(c);  // per base char
-// Override advance with measured value (annotation depth if longer)
-advance = max(base_horiz_advance_pre, annot_depth);
-```
-
-`o.width` and `letter_spacing` both use this value, so frmline layout and
-`vert_min_next_x` tracking in Draw() are both corrected.
-
-Also: `vert_layout_min_x` (post-layout pass) applied `eff_w = max(word->width, font_size)`
-to all words including spaces. For a U+0020 before an inline box this inflated
-`ib_word_x` by `font_size − space_advance`, creating a gap above the box. Fix
-(lvtextfm.cpp `alignLineHorizontal`): apply the font_size minimum only
-for CJK words (where compressed punctuation needs it).
-
-```cpp
-bool is_cjk = (wi->flags & (LTEXT_WORD_IS_CJK | LTEXT_WORD_IS_FLEXIBLE_WIDTH_CJK)) != 0;
-int eff_w = (is_cjk && (int)wi->width < font_sz) ? font_sz : (int)wi->width;
-```
+- `FlowState` tracks vertical column advance in `c_x` / `c_y`.
+- `renderBlockElementEnhanced` feeds inline-start margin into `fmt.setX()` and
+  block-direction progress into `fmt.setY()`.
+- `lvlogical.h` maps CSS physical arrays to logical vertical-rl directions.
+- `LFormattedText::Draw` swaps coordinates back at entry, then draws columns
+  right-to-left and glyphs top-to-bottom.
+- Ruby/inline-box layout uses the inline box's `getY()` as a vertical offset,
+  with the ruby group drawn at the accumulated column advance.
+- Latin and ruby-depth fixes live in `lvtextfm.cpp`; check the nearby comments
+  and the `vertical_ruby_column_spec.lua` regression when changing them.
 
 ### Glyph placement in vertical mode (lvfntman.cpp + lvfntman_vert.{h,cpp})
 
-LuaTeX-ja-conformant vertical typography per JLReq.  Four-stage pipeline:
+LuaTeX-ja-style vertical typography per JLReq.
 
-1. **Pre-shape codepoint substitution** (Phase 5a, lvfntman.cpp measureText + DrawTextString
-   buffer-fill loops + lvfntman_vert.cpp `getVertPresentationForm`): in vertical mode,
-   U+300C → U+FE41, U+3001 → U+FE11 etc. (~23-entry table ported
-   from LuaTeX-ja ltj-jfont.lua:948-957).  Font-conditional via `FT_Get_Char_Index`.
-   Only the HarfBuzz buffer sees the substituted codepoint — the caller's text[]
-   stays original so JFM class lookup, getRectEx, line-break logic all see the
-   ORIGINAL char (mirroring LuaTeX-ja's ltjs.orig_char_table mechanism).
-   **Dashes/leaders (U+2014, U+2013, U+2025, U+2026) are DELIBERATELY omitted**
-   from this table — LuaTeX-ja nullifies vform entries the font's `vrt2` feature
-   already handles (ltj-jfont.lua:1011-1014), so for fonts whose `+vrt2` maps
-   —/‥/… to multi-em composite glyphs (Hiragino 二倍ダーシ gid8857 etc.) we let
-   `+vrt2` produce the continuous-stroke composite instead of pre-substituting.
-
-2. **Phase 3 — half-em compaction** (lvfntman.cpp measureText + DrawTextString
-   advance computation + lvfntman_vert.cpp `getJLReqVertSlotWidth`): override
-   HarfBuzz's natural y_advance with the JFM-specified slot width per class:
-   open bracket / close bracket / comma / middle dot / period / halfwidth kana
-   get em/2; body CJK / dash / exclam / quest / vert mark / Latin stay em.
-
-3. **Phase 5 — inter-class glue/kern matrix** (lvtextfm.cpp measureText loop +
-   lvfntman_vert.cpp `getJLReqGlueKernEighths`): apply JLReq inter-class
-   spacing per jfm-ujisv [N].glue[M] base values.  e.g. 0.5em is appended
-   after CLOSE_BRACKET_COMMA before BODY (= space after 、), 0.5em is
-   appended after BODY before OPEN_BRACKET (= space before 「), 0.25em
-   around MIDDLE_DOT.  The pad widens the current char's slot; cumulative
-   tracker propagates the shift to subsequent chars in the fragment.
-
-4. **Phase 4 — vmtx + cwa in-slot Y** (lvfntman.cpp DrawTextString):
-       gx = col_center + vBX
-       gy = slot_top  + vBY + cwa
-       cwa = align * (fwidth - vadv)  -- align ∈ {0, 0.5, 1}
-   Single unified formula for all classes.  For body CJK (align=middle,
-   fwidth=em): cwa=0 → pure vmtx-based.  For half-em open bracket
-   (align=right): cwa=-em/2 shifts the bitmap to the bottom of the
-   compacted slot (visually attaches 「 to the following char).
+- Pre-shape substitution maps punctuation to vertical presentation forms when
+  the font supports them. Dashes/leaders stay on `vrt2`.
+- Half-em compaction applies to the bracket/comma/period/halfwidth-kana classes.
+- JLReq glue/kern values come from the vertical class matrix.
+- Final glyph placement combines vmtx/vBY with in-slot Y alignment.
+- The class table and matrix live in `lvfntman_vert.{h,cpp}`; the shaping and
+  draw hooks live in `lvfntman.cpp`.
 
 #### Character classes (lvfntman_vert.{h,cpp}: `getJLReqVertClass`)
 
@@ -427,6 +238,15 @@ Use `scripts/push-chain.sh` to push commits through the chain automatically:
 The script handles detached HEAD and diverged branches by cherry-picking onto
 `mytky/master`, and automatically fixes stale submodule SHAs (the common failure
 mode where a local commit SHA appears in a submodule pointer but was never pushed).
+
+### Release timing
+
+- Check the recent `git log` first and judge the full change batch, not just the
+  latest fix.
+- Group adjacent fixes into one release when they touch the same user-facing
+  area.
+- For rendering changes, a `3-4 day` soak is a good default unless the bug is
+  actively blocking users.
 
 Manual equivalent (if needed):
 
