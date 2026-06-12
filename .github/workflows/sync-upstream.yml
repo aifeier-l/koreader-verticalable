@@ -48,7 +48,7 @@ jobs:
             echo "SYNC_BRANCH=$BRANCH" >> $GITHUB_ENV
           fi
 
-      - name: Restore our submodule pins (base and .gitmodules)
+      - name: Restore our submodule pins (base, test, and .gitmodules)
         if: env.MERGE_FAILED != 'true'
         run: |
           # ORIG_HEAD is only set when a merge commit was created.
@@ -58,7 +58,7 @@ jobs:
             exit 0
           fi
           CHANGED=0
-          git checkout ORIG_HEAD -- .gitmodules base
+          git checkout ORIG_HEAD -- .gitmodules base test
           if ! git diff --cached --quiet; then
             CHANGED=1
           fi

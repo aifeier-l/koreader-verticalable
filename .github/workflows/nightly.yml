@@ -46,8 +46,8 @@ jobs:
             echo "should_build=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          CHANGED=$(git diff --name-only "$LAST" HEAD -- \
-            frontend/ plugins/ base Makefile CMakeLists.txt kodev resources/)
+          CHANGED=$(git diff --name-only "$LAST" HEAD | \
+            grep -E '^(frontend/|plugins/|base$|test$|resources/|reader\.lua$|Makefile$|CMakeLists\.txt$|kodev$|.*\.lua$)' || true)
           if [ -n "$CHANGED" ]; then
             echo "Source changes detected:"
             echo "$CHANGED"
