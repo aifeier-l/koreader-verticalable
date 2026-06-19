@@ -33,14 +33,46 @@ jobs:
 
       - name: Merge from upstream koreader
         run: |
+          resolve_ours() {
+            file_path="$1"
+            stage2="$(git ls-files -u -- "$file_path" | awk '$3 == 2 { print $1 " " $2; exit }')"
+            if [ -z "$stage2" ]; then
+              return 0
+            fi
+
+            mode="${stage2%% *}"
+            sha="${stage2#* }"
+            if [ "$mode" = "160000" ]; then
+              git update-index --cacheinfo "$mode,$sha,$file_path"
+            else
+              git checkout --ours -- "$file_path"
+              git add "$file_path"
+            fi
+          }
+
+          restore_our_pins() {
+            resolve_ours .gitmodules
+            resolve_ours base
+            resolve_ours test
+          }
+
           if git merge upstream/master --no-edit; then
             echo "MERGE_FAILED=false" >> $GITHUB_ENV
           else
+            restore_our_pins
+            REMAINING_CONFLICTS="$(git diff --name-only --diff-filter=U)"
+            if [ -z "$REMAINING_CONFLICTS" ]; then
+              git commit --no-edit
+              echo "MERGE_FAILED=false" >> $GITHUB_ENV
+              exit 0
+            fi
+
             # Create a branch with the conflicted state for PR review
             git merge --abort
             BRANCH="upstream-sync-$(date +%Y%m%d)"
             git checkout -b "$BRANCH"
             git merge upstream/master --no-edit || true
+            restore_our_pins
             git add -A
             git commit -m "WIP: upstream sync $(date +%Y-%m-%d) — conflicts need resolution"
             git push origin "$BRANCH"
