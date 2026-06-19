@@ -2015,6 +2015,10 @@ function ReaderHighlight:onHoldPan(_, ges)
         local sboxes = self.selected_text.sboxes
         self.view.highlight.temp[self.hold_pos.page] = sboxes
     end
+    -- Ensure indicator overlay does not restore stale background over updated highlights.
+    if self.ui.keyselection:isActive() then
+        self.ui.keyselection:clearOverlay()
+    end
     UIManager:setDirty(self.dialog, "ui")
 end
 
@@ -2378,7 +2382,7 @@ function ReaderHighlight:onHighlightSearch()
     end
     self:highlightFromHoldPos()
     if self.selected_text then
-        local text = util.stripPunctuation(util.cleanupSelectedText(self.selected_text.text))
+        local text = util.cleanupSelectedText(self.selected_text.text)
         self.ui.search:searchText(text)
     end
 end
