@@ -19,7 +19,11 @@ Installation steps are the same as upstream KOReader:
 [Kindle](https://github.com/koreader/koreader/wiki/Installation-on-Kindle-devices) •
 [Kobo](https://github.com/koreader/koreader/wiki/Installation-on-Kobo-devices)
 
-In-app OTA update is supported once installed: **Menu → Update → Check for update**.
+Kindle, Kobo, PocketBook, Cervantes, and reMarkable builds support KOReader's
+file-based OTA updater: **Menu → Update → Check for update**. Android APK builds
+use Android's APK install flow instead; the APKs published by this fork's GitHub
+releases support the same in-app update check, download the next APK in-app, and
+then hand it to Android's installer.
 
 ### Nightly builds
 
@@ -32,8 +36,10 @@ at the cost of less testing, so it may be less stable.
   [`nightly` pre-release](https://github.com/m-tky/koreader-tategumi/releases/tag/nightly)
   (labelled `vYYYY.MM.DD`). It is replaced in place by each build, so the link
   always points at the most recent one.
-- **OTA**: switch the update channel to development once, then check for updates
-  as usual: **Menu → Update → Settings → Update channel → Development**, then
+- **OTA for nightly builds**: on Kindle, Kobo, PocketBook, Cervantes,
+  reMarkable, and this fork's Android APK builds, switch the update channel to
+  development if you want to receive nightly builds:
+  **Menu → Update → Settings → Update channel → Development**, then
   **Menu → Update → Check for update**. Switch back to **Stable** to return to
   numbered releases.
 
@@ -108,6 +114,14 @@ reinstalling from scratch:
 2. Restart KOReader and go to **Menu → Update → Check for update**.
 3. KOReader will download and apply this fork's build automatically.
 
+This shortcut only works for file-based installs that expose a writable
+`<koreader-dir>/frontend/` directory. Android APK installs, including Boox
+devices, cannot use this migration path because the application files are
+packaged inside the APK. If you installed KOReader from an APK, install this
+fork's Android APK from the release page instead. After that, this fork's GitHub
+APK builds can check for updates in-app, download the next APK, and hand it to
+Android's installer.
+
 ## Support
 
 If you find this vertical text fork useful, you can support its development:
@@ -150,7 +164,11 @@ upstream KOReader（master / nightly）と定期的に同期しています。
 [Kindle](https://github.com/koreader/koreader/wiki/Installation-on-Kindle-devices) •
 [Kobo](https://github.com/koreader/koreader/wiki/Installation-on-Kobo-devices)
 
-インストール後はアプリ内 OTA 更新に対応しています: **メニュー → 更新 → 更新を確認**。
+Kindle、Kobo、PocketBook、Cervantes、reMarkable 版は KOReader のファイル
+差し替え型 OTA アップデートに対応しています: **メニュー → 更新 → 更新を確認**。
+Android APK 版は Android の APK インストール機能を使います。本フォークの GitHub
+リリースで配布している APK では、同じアプリ内の更新確認から次の APK を検出・
+ダウンロードし、Android のインストーラに渡して更新できます。
 
 ### Nightly ビルド
 
@@ -161,7 +179,9 @@ upstream KOReader（master / nightly）と定期的に同期しています。
 - **ダウンロード**: ローリング更新の
   [`nightly` pre-release](https://github.com/m-tky/koreader-tategumi/releases/tag/nightly)
   （`vYYYY.MM.DD` ラベル）。各ビルドで置き換わるため、リンクは常に最新を指します。
-- **OTA**: 更新チャンネルを Development に一度切り替えれば、あとは通常通りです:
+- **nightly ビルドの OTA**: Kindle、Kobo、PocketBook、Cervantes、reMarkable、
+  および本フォークの Android APK ビルドでは、nightly ビルドを受け取りたい場合に
+  更新チャンネルを Development に切り替えてください:
   **メニュー → 更新 → 設定 → 更新チャンネル → Development**、続いて
   **メニュー → 更新 → 更新を確認**。番号付きリリースに戻すには **Stable** に
   切り替えてください。
@@ -237,6 +257,13 @@ KOReader nightly でも同様に再現するか併記いただけると振り分
    `<koreader-dir>/frontend/ui/otamanager.lua` にコピーします。
 2. KOReader を再起動し、**メニュー → 更新 → 更新を確認** へ進みます。
 3. KOReader が本フォークのビルドを自動的にダウンロード・適用します。
+
+この方法が使えるのは、端末上で書き込み可能な `<koreader-dir>/frontend/`
+ディレクトリが見えているファイル配置型のインストールだけです。Boox 端末を含む
+Android APK 版は、アプリ本体が APK 内にパッケージされるため、この移行方法は
+使えません。APK からインストールしている場合は、リリースページから本フォークの
+Android APK をインストールしてください。その後は、アプリ内で更新を確認し、
+次の APK をダウンロードして Android のインストーラで更新できます。
 
 ## サポート
 
