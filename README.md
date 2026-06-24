@@ -49,7 +49,8 @@ EPUBs that already contain `writing-mode: vertical-rl` in their CSS (most commer
 Japanese novels do) render vertically automatically.
 
 For EPUBs that do not include this CSS, add the following via
-**Typeset (Aa icon) → Style tweaks → Book-specific tweak** (long-press to edit):
+**Document (page icon) → Style tweaks → Book-specific tweak**
+(long-press to edit):
 
 ```css
 body { writing-mode: vertical-rl !important; }
@@ -84,8 +85,8 @@ The override is saved per-book and will not be overwritten on subsequent opens.
 
 - **Double paragraph indent**: Some EPUBs use a U+3000 ideographic space (`　`) for
   indentation while CREngine also applies its default `text-indent: 1.2em`, producing
-  a two-character indent. Fix per-book via **Aa → Style tweaks → Paragraph first-line
-  indentation → 0** (no indent).
+  a two-character indent. Fix per-book via **Document (page icon) → Style
+  tweaks → Paragraph first-line indentation → 0** (no indent).
 
 ## Compatibility
 
@@ -191,8 +192,8 @@ Android APK 版は Android の APK インストール機能を使います。本
 CSS に `writing-mode: vertical-rl` が既に含まれている EPUB（市販の日本語小説の
 多くがそうです）は自動的に縦書きで表示されます。
 
-含まれていない EPUB には、**Typeset（Aa アイコン）→ Style tweaks → Book-specific
-tweak**（長押しで編集）から以下を追加してください:
+含まれていない EPUB には、**Document（文書アイコン）→ Style tweaks →
+Book-specific tweak**（長押しで編集）から以下を追加してください:
 
 ```css
 body { writing-mode: vertical-rl !important; }
@@ -227,8 +228,8 @@ RTL が検出されると通知が表示され、ページめくり方向が反�
 
 - **段落字下げの二重化**: 一部の EPUB は U+3000（`　` 全角スペース）で字下げを
   行いますが、CREngine がデフォルトの `text-indent: 1.2em` も適用するため二
-  文字分の字下げになります。本ごとに **Aa → Style tweaks → Paragraph first-line
-  indentation → 0**（インデント無し）で修正してください。
+  文字分の字下げになります。本ごとに **Document（文書アイコン）→ Style tweaks
+  → Paragraph first-line indentation → 0**（インデント無し）で修正してください。
 
 ## 互換性
 
