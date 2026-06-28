@@ -96,14 +96,21 @@ even without upstream verification, but noting whether the issue also reproduces
 vanilla upstream KOReader nightly helps triage — plugin breakage that also occurs
 upstream is out of scope for this fork.
 
-### Plugins with vertical-rl support
+### Related plugins
 
-The following plugins have soft-forks tuned for this fork's vertical-rl mode:
+The following plugins are maintained alongside this fork or tuned for
+Japanese/vertical-rl use:
 
 - **Bookends** ([m-tky/bookends.koplugin](https://github.com/m-tky/bookends.koplugin)) —
   configurable text overlays. Forked from
   [AndyHazz/bookends.koplugin](https://github.com/AndyHazz/bookends.koplugin) with
   vertical-rl auto-detection so progress bars fill right→left in tategumi documents.
+
+- **koreader-skk** ([m-tky/koreader-skk](https://github.com/m-tky/koreader-skk)) —
+  SKK Japanese input plugin for KOReader. KOReader's built-in Japanese keyboard
+  can enter hiragana and katakana, while this plugin adds SKK-style kana-to-kanji
+  conversion with a bundled dictionary. It supports both physical keyboards and
+  a touch virtual keyboard.
 
 ## Switching from vanilla KOReader
 
@@ -239,15 +246,21 @@ upstream の安定版ではなく **nightly** 相当です。サードパーテ�
 KOReader nightly でも同様に再現するか併記いただけると振り分けに役立ちます
 — upstream でも壊れているプラグインは本フォークの対象外です。
 
-### vertical-rl 対応プラグイン
+### 関連プラグイン
 
-以下のプラグインは本フォークの vertical-rl 向けにソフトフォーク版が用意されています:
+以下のプラグインは、本フォークとあわせて利用できるよう整備しています:
 
 - **Bookends** ([m-tky/bookends.koplugin](https://github.com/m-tky/bookends.koplugin)) —
   設定可能なテキストオーバーレイ。
   [AndyHazz/bookends.koplugin](https://github.com/AndyHazz/bookends.koplugin) から
   フォークし、縦書きドキュメントで進捗バーが右→左に進むよう vertical-rl
   を自動検出します。
+
+- **koreader-skk** ([m-tky/koreader-skk](https://github.com/m-tky/koreader-skk)) —
+  KOReader 向けの SKK 日本語入力プラグインです。KOReader 標準の日本語
+  キーボードではひらがな・カタカナ入力までだったところを、同梱辞書を使った
+  SKK 方式のかな漢字変換に対応させます。物理キーボードとタッチ用の仮想
+  キーボードの両方で利用できます。
 
 ## vanilla KOReader からの移行
 
