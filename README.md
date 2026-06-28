@@ -2,7 +2,7 @@
 
 **English** | [日本語](#日本語)
 
-**KOReader fork with Japanese vertical text (縦書き / tategumi) support.**
+**KOReader fork with Japanese vertical text (縦書き) support.**
 
 This is a personal fork of [KOReader](https://github.com/koreader/koreader) that adds
 `writing-mode: vertical-rl` rendering for Japanese novels in EPUB format.
@@ -104,7 +104,7 @@ Japanese/vertical-rl use:
 - **Bookends** ([m-tky/bookends.koplugin](https://github.com/m-tky/bookends.koplugin)) —
   configurable text overlays. Forked from
   [AndyHazz/bookends.koplugin](https://github.com/AndyHazz/bookends.koplugin) with
-  vertical-rl auto-detection so progress bars fill right→left in tategumi documents.
+  vertical-rl auto-detection so progress bars fill right→left in vertical documents.
 
 - **koreader-skk** ([m-tky/koreader-skk](https://github.com/m-tky/koreader-skk)) —
   SKK Japanese input plugin for KOReader. KOReader's built-in Japanese keyboard
@@ -142,7 +142,7 @@ For the upstream KOReader project itself, please see
 ## Acknowledgements
 
 KOReader is an open-source e-book reader for e-ink devices, developed by volunteers
-around the world. The vertical text (tategumi) implementation in this fork is built
+around the world. The vertical text implementation in this fork is built
 on their work. See [upstream KOReader](https://github.com/koreader/koreader) for the
 project's main features, supported formats, and developer documentation.
 
@@ -155,7 +155,7 @@ project's main features, supported formats, and developer documentation.
 
 [English](#koreader-tategumi) | **日本語**
 
-**KOReader を日本語の縦書き（tategumi）に対応させた個人フォークです。**
+**KOReader を日本語の縦書きに対応させた個人フォークです。**
 
 EPUB 形式の日本語小説向けに `writing-mode: vertical-rl` レンダリングを追加した
 [KOReader](https://github.com/koreader/koreader) のフォークです。
@@ -291,7 +291,7 @@ upstream の KOReader プロジェクト本体については
 ## 謝辞
 
 KOReader は世界中のボランティアが開発する e-ink デバイス向けオープンソース
-電子書籍リーダーです。本フォークの縦書き（tategumi）実装はその成果の上に
+電子書籍リーダーです。本フォークの縦書き実装はその成果の上に
 構築されています。本プロジェクトの主要機能・対応フォーマット・開発者向け
 ドキュメントは [upstream KOReader](https://github.com/koreader/koreader) を
 ご参照ください。
