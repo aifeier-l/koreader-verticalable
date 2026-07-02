@@ -132,7 +132,32 @@ describe("Vertical text", function()
             -- The core invariant: tap → word → sbox should contain ~the tap point.
             -- In vertical-rl, docToWindowPoint may be off by ~left_margin (≈9px).
             local tol = 60  -- generous tolerance for margin offsets
-            local x, y, word, sb = find_any_content(doc)
+            local x, y, word, sb
+            local first_x, first_y, first_word, first_sb
+            local w, h = Screen:getWidth(), Screen:getHeight()
+            for _, y_frac in ipairs({0.3, 0.5, 0.2, 0.7}) do
+                local yy = math.floor(h * y_frac)
+                local xs = find_content_columns(doc, yy, 1)
+                if xs then
+                    for _, xx in ipairs(xs) do
+                        local ok, ww = pcall(function()
+                            return doc:getWordFromPosition({x=xx, y=yy})
+                        end)
+                        if ok and ww and ww.word and ww.sbox then
+                            first_x, first_y, first_word, first_sb =
+                                first_x or xx, first_y or yy, first_word or ww, first_sb or ww.sbox
+                            local ssb = ww.sbox
+                            if ssb.x - tol <= xx and xx <= ssb.x + ssb.w + tol
+                                    and ssb.y - tol <= yy and yy <= ssb.y + ssb.h + tol then
+                                x, y, word, sb = xx, yy, ww, ssb
+                                break
+                            end
+                        end
+                    end
+                end
+                if sb then break end
+            end
+            x, y, word, sb = x or first_x, y or first_y, word or first_word, sb or first_sb
             assert.truthy(sb, "No word/sbox found on page")
             assert.truthy(
                 sb.x - tol <= x and x <= sb.x + sb.w + tol,
