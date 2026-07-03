@@ -151,13 +151,27 @@ describe("Ruby position", function()
                 table.sort(strides)
                 return strides[math.ceil(#strides / 2)]
             end
+            local function first_body_y(words)
+                if #words < 5 then return nil end
+                local max_h = 0
+                for _, w in ipairs(words) do
+                    if w.sbox.h > max_h then max_h = w.sbox.h end
+                end
+                local h_threshold = max_h * 0.75
+                for _, w in ipairs(words) do
+                    if w.sbox.h >= h_threshold and w.sbox.h <= max_h then
+                        return w.sbox.y
+                    end
+                end
+                return nil
+            end
 
             local step = math.max(4, math.floor(h / 80))
             local strides = {}
             for _, x in ipairs(cols) do
                 local words = scan_column_trusted(doc, x, 5, h - 5, step)
                 local s = median_stride(words)
-                if s then table.insert(strides, {x=x, stride=s, n=#words}) end
+                if s then table.insert(strides, {x=x, stride=s, n=#words, first_y=first_body_y(words)}) end
             end
 
             if #strides < 2 then
@@ -165,32 +179,75 @@ describe("Ruby position", function()
                 return
             end
 
-            -- Find the MIN stride (most compressed) and MAX stride (uncompressed).
-            local min_s, max_s = strides[1].stride, strides[1].stride
-            local min_x, max_x = strides[1].x, strides[1].x
+            -- Find the MAX stride among justified/non-compressed columns.
+            local max_s = strides[1].stride
+            local max_x = strides[1].x
             for _, s in ipairs(strides) do
-                if s.stride < min_s then min_s = s.stride; min_x = s.x end
                 if s.stride > max_s then max_s = s.stride; max_x = s.x end
             end
 
-            -- Without the bug, all columns should have the SAME stride within tight
-            -- rounding tolerance (≤ 0.5px).  With the bug, the indented column is
-            -- compressed by ~1px per pair, so its median stride differs from the
-            -- non-indented columns by ~1px.
-            local stride_diff = max_s - min_s
-            assert.truthy(stride_diff <= 0.5,
-                string.format(
-                    "Column stride mismatch (compression detected): "..
-                    "min_stride=%.2fpx at col_x=%d, max_stride=%.2fpx at col_x=%d, diff=%.2fpx\n"..
-                    "(All strides: %s)",
-                    min_s, min_x, max_s, max_x, stride_diff,
-                    (function()
-                        local parts = {}
-                        for _, s in ipairs(strides) do
-                            table.insert(parts, string.format("x=%d stride=%.1f n=%d", s.x, s.stride, s.n))
+            -- With JFM enabled, final columns under text-align-last:auto are not
+            -- justified and may keep their natural 1.5em kana-comma stride. This
+            -- regression only cares that text-indent columns are not compressed.
+            local checked = 0
+            for _, s in ipairs(strides) do
+                if s.first_y and s.first_y > 30 then
+                    checked = checked + 1
+                    local stride_diff = max_s - s.stride
+                    assert.truthy(stride_diff <= 0.5,
+                        string.format(
+                            "Indented column stride mismatch (compression detected): "..
+                            "stride=%.2fpx at col_x=%d first_y=%d, max_stride=%.2fpx at col_x=%d, diff=%.2fpx\n"..
+                            "(All strides: %s)",
+                            s.stride, s.x, s.first_y, max_s, max_x, stride_diff,
+                            (function()
+                                local parts = {}
+                                for _, item in ipairs(strides) do
+                                    table.insert(parts, string.format("x=%d stride=%.1f n=%d first_y=%s",
+                                        item.x, item.stride, item.n, item.first_y or "nil"))
+                                end
+                                return table.concat(parts, ", ")
+                            end)()))
+                end
+            end
+            if checked == 0 then
+                pending("Need at least one indented content column")
+            end
+        end)
+
+        it("ruby base sboxes are not collapsed at the column bottom", function()
+            local screen_w, screen_h = Screen:getWidth(), Screen:getHeight()
+            local targets = { ["蝶"] = true, ["花"] = true, ["鳥"] = true }
+            local found = {}
+            local seen = {}
+            for x = screen_w - 10, 10, -10 do
+                for y = 5, screen_h - 5, 4 do
+                    local ok, word = pcall(function()
+                        return doc:getWordFromPosition({x=x, y=y})
+                    end)
+                    if ok and word and word.word and word.sbox and targets[word.word] then
+                        local sb = word.sbox
+                        local key = string.format("%s:%d:%d:%d:%d", word.word, sb.x, sb.y, sb.w, sb.h)
+                        if not seen[key] then
+                            seen[key] = true
+                            if sb.h > 0 then
+                                found[word.word] = {x=sb.x, y=sb.y, w=sb.w, h=sb.h}
+                            end
                         end
-                        return table.concat(parts, ", ")
-                    end)()))
+                    end
+                end
+            end
+
+            local parts = {}
+            for ruby_base in pairs(targets) do
+                local sb = found[ruby_base]
+                assert.truthy(sb, "No non-collapsed sbox found for ruby base " .. ruby_base)
+                table.insert(parts, string.format("%s@x%d/y%d/h%d", ruby_base, sb.x, sb.y, sb.h))
+                assert.truthy(sb.h >= 16 and sb.h <= 30,
+                    string.format("Unexpected ruby base height for %s: %s", ruby_base, sb.h))
+                assert.truthy(sb.y < screen_h - 40,
+                    string.format("Ruby base %s collapsed near bottom: %s", ruby_base, table.concat(parts, ", ")))
+            end
         end)
     end)
 
