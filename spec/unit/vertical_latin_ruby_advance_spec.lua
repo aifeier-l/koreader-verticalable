@@ -96,4 +96,44 @@ describe("Vertical text: Latin ruby uses horizontal advance #latin_ruby_advance"
                 .. "in measureText() (base_horiz_advance_pre path) is not active.",
                 total_px))
     end)
+
+    it("rp fallback text is ignored when measuring annotation depth #latin_rp_advance", function()
+        local rp_epub = "spec/front/unit/data/fixtures/vertical_text/ruby_rp_latin.epub"
+        if not lfs.attributes(rp_epub) then
+            pending("ruby_rp_latin.epub not found")
+            return
+        end
+
+        local before_total = doc and doc._document and doc._document:getVertRubyAdvDiff() or 0
+        if readerui then readerui:onClose() end
+        readerui = ReaderUI:new{
+            dimen = Screen:getSize(),
+            document = DocumentRegistry:openDocument(rp_epub),
+        }
+        UIManager:show(readerui)
+        fastforward_ui_events()
+        doc = readerui.document
+
+        local pages_to_visit = math.min(doc:getPageCount(), 5)
+        for pg = 1, pages_to_visit do
+            readerui.rolling:onGotoPage(pg)
+            fastforward_ui_events()
+        end
+
+        local total_px, max_px = doc._document:getVertRubyAdvDiff()
+        local delta_px = total_px - before_total
+
+        print(string.format(
+            "[latin_rp_advance] pages=%d  adv_diff_delta=%d px  adv_diff_total=%d px  adv_diff_max=%d px",
+            pages_to_visit, delta_px, total_px, max_px))
+
+        assert.is_true(delta_px > 0,
+            string.format(
+                "render_w - advance diff delta is %d px (expected > 0). "
+                .. "The <rp> fallback parentheses were likely counted as visible "
+                .. "ruby annotation text, making annot_depth dominate the ruby "
+                .. "inline-box advance.  Ignore el_rp when measuring vertical "
+                .. "ruby annotation depth.",
+                delta_px))
+    end)
 end)
