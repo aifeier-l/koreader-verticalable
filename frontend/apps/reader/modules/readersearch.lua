@@ -24,6 +24,36 @@ local T = require("ffi/util").template
 
 local icon_size = Screen:scaleBySize(0.8 * G_defaults:readSetting("DGENERIC_ICON_SIZE")) -- square icons
 
+-- Button labels and positions follow UI mirroring. These helpers only flip
+-- button actions for RTL page order.
+local function getSearchButtonDirections(inverse_reading_order)
+    local backward_direction = 1
+    local forward_direction = 0
+    if inverse_reading_order then
+        backward_direction, forward_direction = forward_direction, backward_direction
+    end
+    return backward_direction, forward_direction
+end
+
+local function getSearchButtonViewRels(inverse_reading_order)
+    local backward_view_rel = -1
+    local forward_view_rel = 1
+    if inverse_reading_order then
+        backward_view_rel, forward_view_rel = forward_view_rel, backward_view_rel
+    end
+    return backward_view_rel, forward_view_rel
+end
+
+local function getResultNavigationIndexes(index, items_nb, inverse_reading_order)
+    local left_index, right_index = index - 1, index + 1
+    local left_hold_index, right_hold_index = 1, items_nb
+    if inverse_reading_order then
+        left_index, right_index = right_index, left_index
+        left_hold_index, right_hold_index = right_hold_index, left_hold_index
+    end
+    return left_index, right_index, left_hold_index, right_hold_index
+end
+
 local ReaderSearch = InputContainer:extend{
     direction = 0, -- 0 for search forward, 1 for search backward
     case_insensitive = true, -- default to case insensitive
@@ -293,9 +323,7 @@ end
 
 function ReaderSearch:onShowFulltextSearchInput(search_string)
     local backward_text, forward_text = BD.getArrowLabels()
-    if self.view.inverse_reading_order then
-        backward_text, forward_text = forward_text, backward_text
-    end
+    local backward_direction, forward_direction = getSearchButtonDirections(self.view.inverse_reading_order)
     self.input_dialog = InputDialog:new{
         title = _("Enter text to search for"),
         width = math.floor(math.min(Screen:getWidth(), Screen:getHeight()) * 0.9),
@@ -319,14 +347,14 @@ function ReaderSearch:onShowFulltextSearchInput(search_string)
                 {
                     text = backward_text,
                     callback = function()
-                        self:searchCallback(1)
+                        self:searchCallback(backward_direction)
                     end,
                 },
                 {
                     text = forward_text,
                     is_enter_default = true,
                     callback = function()
-                        self:searchCallback(0)
+                        self:searchCallback(forward_direction)
                     end,
                 },
             },
@@ -545,8 +573,12 @@ function ReaderSearch:onShowSearchDialog(text, direction, search_type, case_inse
         end
     end
     local backward_text, forward_text, from_start_text, from_end_text = BD.getArrowLabels()
+    local search_from_start = self.searchFromStart
+    local search_from_end = self.searchFromEnd
+    local backward_direction, forward_direction = getSearchButtonDirections(self.view.inverse_reading_order)
+    local backward_view_rel, forward_view_rel = getSearchButtonViewRels(self.view.inverse_reading_order)
     if self.view.inverse_reading_order then
-        backward_text, forward_text = forward_text, backward_text
+        search_from_start, search_from_end = search_from_end, search_from_start
     end
     self.search_dialog = ButtonDialog:new{
         -- alpha = 0.7,
@@ -555,14 +587,14 @@ function ReaderSearch:onShowSearchDialog(text, direction, search_type, case_inse
                 {
                     text = from_start_text,
                     vsync = true,
-                    callback = search(self.searchFromStart, text, nil),
+                    callback = search(search_from_start, text, nil),
                 },
                 {
                     text = backward_text,
                     vsync = true,
                     callback = function()
-                        if self.ui.rolling or zoom_to_page or not self.ui.paging:onGotoViewRel(-1, true) then
-                            search(self.searchNext, text, 1)()
+                        if self.ui.rolling or zoom_to_page or not self.ui.paging:onGotoViewRel(backward_view_rel, true) then
+                            search(self.searchNext, text, backward_direction)()
                         end
                     end,
                 },
@@ -579,15 +611,15 @@ function ReaderSearch:onShowSearchDialog(text, direction, search_type, case_inse
                     text = forward_text,
                     vsync = true,
                     callback = function()
-                        if self.ui.rolling or zoom_to_page or not self.ui.paging:onGotoViewRel(1, true) then
-                            search(self.searchNext, text, 0)()
+                        if self.ui.rolling or zoom_to_page or not self.ui.paging:onGotoViewRel(forward_view_rel, true) then
+                            search(self.searchNext, text, forward_direction)()
                         end
                     end,
                 },
                 {
                     text = from_end_text,
                     vsync = true,
-                    callback = search(self.searchFromEnd, text, nil),
+                    callback = search(search_from_end, text, nil),
                 },
             }
         },
@@ -898,13 +930,11 @@ function ReaderSearch:gotoResultsItem(index)
 
     local chevron_left = "chevron.left"
     local chevron_right = "chevron.right"
-    local swap_chevrons = BD.mirroredUILayout()
-    if self.view.inverse_reading_order then
-        swap_chevrons = not swap_chevrons
-    end
-    if swap_chevrons then
+    if BD.mirroredUILayout() then
         chevron_left, chevron_right = chevron_right, chevron_left
     end
+    local left_index, right_index, left_hold_index, right_hold_index =
+        getResultNavigationIndexes(index, #self.result_menu.item_table, self.view.inverse_reading_order)
     local dialog
     dialog = ButtonDialog:new{
         buttons = {
@@ -920,14 +950,14 @@ function ReaderSearch:gotoResultsItem(index)
                     icon = chevron_left,
                     icon_width = icon_size,
                     icon_height = icon_size,
-                    enabled = index > 1,
+                    enabled = left_index >= 1 and left_index <= #self.result_menu.item_table,
                     callback = function()
                         UIManager:close(dialog)
-                        self:gotoResultsItem(index - 1)
+                        self:gotoResultsItem(left_index)
                     end,
                     hold_callback = function()
                         UIManager:close(dialog)
-                        self:gotoResultsItem(1)
+                        self:gotoResultsItem(left_hold_index)
                     end,
                 },
                 {
@@ -944,14 +974,14 @@ function ReaderSearch:gotoResultsItem(index)
                     icon = chevron_right,
                     icon_width = icon_size,
                     icon_height = icon_size,
-                    enabled = index < #self.result_menu.item_table,
+                    enabled = right_index >= 1 and right_index <= #self.result_menu.item_table,
                     callback = function()
                         UIManager:close(dialog)
-                        self:gotoResultsItem(index + 1)
+                        self:gotoResultsItem(right_index)
                     end,
                     hold_callback = function()
                         UIManager:close(dialog)
-                        self:gotoResultsItem(#self.result_menu.item_table)
+                        self:gotoResultsItem(right_hold_index)
                     end,
                 },
                 {
