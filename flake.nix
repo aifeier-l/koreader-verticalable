@@ -25,6 +25,29 @@
           "lua_cliargs"
         ];
 
+        koreaderBuild = pkgs.writeShellScriptBin "koreader-build" ''
+          exec make -C base "$@"
+        '';
+        koreaderRun = pkgs.writeShellScriptBin "koreader-run" ''
+          exec make run "$@"
+        '';
+        koreaderTestBase = pkgs.writeShellScriptBin "koreader-test-base" ''
+          exec base/test-runner/runtests "$@"
+        '';
+        koreaderTestFront = pkgs.writeShellScriptBin "koreader-test-front" ''
+          exec make testfront "$@"
+        '';
+        koreaderTestVertical = pkgs.writeShellScriptBin "koreader-test-vertical" ''
+          exec test/test-vertical.sh "$@"
+        '';
+        koreaderScreenshotCompare = pkgs.writeShellScriptBin "koreader-screenshot-compare" ''
+          exec test/test-vertical.sh compare "$@"
+        '';
+        koreaderCreateEpub = pkgs.writeShellScriptBin "koreader-create-epub" ''
+          exec python3 base/tests/fixtures/vertical_text/create-epub.py \
+            base/tests/fixtures/vertical_text/simple_ja_noruby.epub "$@"
+        '';
+
       in
       {
         devShells.default = pkgs.mkShell {
@@ -46,6 +69,8 @@
             luajitPackages.luacheck
             shellcheck shfmt
             zip
+            koreaderBuild koreaderRun koreaderTestBase koreaderTestFront
+            koreaderTestVertical koreaderScreenshotCompare koreaderCreateEpub
             # CI lint tools (crengine/.github/workflows/build.yml runs clang-tidy + cppcheck)
             clang-tools cppcheck
             # System libs needed for crengine lint to resolve includes via pkg-config
@@ -64,17 +89,9 @@
           shellHook = ''
             export LD_LIBRARY_PATH="${pkgs.sdl3}/lib:${pkgs.libGL}/lib:${pkgs.libusb1}/lib:$LD_LIBRARY_PATH"
 
-            alias koreader-build='make -C base'
-            alias koreader-run='make -C base run'
-            alias koreader-test-base='base/test-runner/runtests'
-            alias koreader-test-front='make testfront'
-            alias koreader-test-vertical='test/test-vertical.sh'
-            alias koreader-screenshot-compare='test/test-vertical.sh compare'
-            alias koreader-create-epub='python3 base/tests/fixtures/vertical_text/create-epub.py base/tests/fixtures/vertical_text/simple_ja_noruby.epub'
-
             echo "KOReader dev shell ready."
             echo "  koreader-build          — build emulator (make -C base)"
-            echo "  koreader-run            — run emulator (make -C base run)"
+            echo "  koreader-run            — run emulator (make run)"
             echo "  koreader-test-base      — run base/ unit tests"
             echo "  koreader-test-front     — run frontend unit tests"
             echo "  koreader-test-vertical  — run vertical text screenshot tests"
