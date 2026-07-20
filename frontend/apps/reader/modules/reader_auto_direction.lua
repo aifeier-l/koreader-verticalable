@@ -5,7 +5,8 @@ applies it to the reader view when the user has not made an explicit choice.
 Supported sources:
 - EPUB: `page-progression-direction` attribute on the OPF `<spine>` element
   (stored in document props by crengine's epubfmt.cpp, exposed via cre.cpp)
-- CBZ/CBR/CBT: `<ReadingDirection>` element inside ComicInfo.xml
+- CBZ/CBR/CBT: `<Manga>YesAndRightToLeft</Manga>` inside ComicInfo.xml,
+  with `<ReadingDirection>` accepted for compatibility
 
 This module is intentionally separate from ReaderView so that upstream
 merges to readerview.lua do not conflict with fork-specific detection logic.
@@ -19,16 +20,23 @@ local Notification = require("ui/widget/notification")
 local _ = require("gettext")
 
 local ReaderAutoDirection = EventListener:extend{}
+ReaderAutoDirection.DETECTION_VERSION = 2
 
 function ReaderAutoDirection:onReadSettings(config)
-    -- "direction_auto_detected" is written the first time we successfully detect
-    -- a direction for this document.  Once set, we defer entirely to whatever
-    -- inverse_reading_order the user (or the previous auto-run) left behind.
-    -- This avoids re-detecting on every open while still letting the user override.
-    if config:has("direction_auto_detected") then return end
+    local detected_version = tonumber(config:readSetting("direction_auto_detected_version")) or 0
+    if detected_version >= self.DETECTION_VERSION then return end
+
+    local has_legacy_detection = config:has("direction_auto_detected")
+
+    -- A per-document direction that predates auto-detection is an established
+    -- user choice. Legacy auto-detection entries are safe to migrate: their
+    -- marker lets us distinguish them from such pre-existing settings.
+    if not has_legacy_detection and config:has("inverse_reading_order") then
+        return
+    end
 
     -- Global RTL default already in effect – nothing to do.
-    if self.view.inverse_reading_order then return end
+    if not has_legacy_detection and self.view.inverse_reading_order then return end
 
     local ok, PageDirection = pcall(require, "util/page_direction")
     if not ok then return end
@@ -36,8 +44,10 @@ function ReaderAutoDirection:onReadSettings(config)
     local dir = PageDirection.getDirection(self.document)
 
     -- Mark detection as done regardless of outcome so we don't re-scan on
-    -- every open (the result is stored in inverse_reading_order itself).
+    -- every open. The version lets corrected detectors revisit only results
+    -- produced by an older implementation.
     config:saveSetting("direction_auto_detected", dir or "none")
+    config:saveSetting("direction_auto_detected_version", self.DETECTION_VERSION)
 
     if dir ~= "rtl" then return end
 

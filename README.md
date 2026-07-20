@@ -62,7 +62,10 @@ Japanese manga EPUBs and CBZ/CBR files with right-to-left page order are detecte
 automatically when you open them for the first time:
 
 - **EPUB**: reads `page-progression-direction="rtl"` from the OPF spine
-- **CBZ/CBR**: reads `<ReadingDirection>RTL</ReadingDirection>` from `ComicInfo.xml`
+- **CBZ/CBR**: reads the standard
+  `<Manga>YesAndRightToLeft</Manga>` value from `ComicInfo.xml`
+  (`<ReadingDirection>RTL</ReadingDirection>` and `RightToLeft` are also
+  accepted for compatibility)
 
 When RTL is detected a notification appears, the page-turn direction is reversed,
 and the progress bar fills from right (page 1) to left (last page).
@@ -212,7 +215,9 @@ body { writing-mode: vertical-rl !important; }
 初回オープン時に自動検出されます:
 
 - **EPUB**: OPF spine の `page-progression-direction="rtl"` を読み取り
-- **CBZ/CBR**: `ComicInfo.xml` の `<ReadingDirection>RTL</ReadingDirection>` を読み取り
+- **CBZ/CBR**: `ComicInfo.xml` の標準指定
+  `<Manga>YesAndRightToLeft</Manga>` を読み取り
+  （互換性のため `<ReadingDirection>RTL</ReadingDirection>` と `RightToLeft` にも対応）
 
 RTL が検出されると通知が表示され、ページめくり方向が反転し、進捗バーは右
 （1 ページ目）から左（最終ページ）に進みます。
