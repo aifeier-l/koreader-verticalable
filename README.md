@@ -2,10 +2,11 @@
 
 **English** | [日本語](#日本語)
 
-**KOReader fork with Japanese vertical text (縦書き) support.**
+**KOReader fork for Japanese vertical text (縦書き) and right-to-left manga.**
 
-This is a personal fork of [KOReader](https://github.com/koreader/koreader) that adds
-`writing-mode: vertical-rl` rendering for Japanese novels in EPUB format.
+This is a personal fork of [KOReader](https://github.com/koreader/koreader) for
+Japanese books. It adds `writing-mode: vertical-rl` rendering for EPUB novels and
+automatic right-to-left (RTL) page order for manga EPUBs and comic archives.
 It is regularly synced with upstream KOReader (master / nightly).
 
 ![Vertical text rendering of 三四郎 (Natsume Soseki)](doc/screenshots/tategumi.png)
@@ -56,19 +57,24 @@ For EPUBs that do not include this CSS, add the following via
 body { writing-mode: vertical-rl !important; }
 ```
 
-## RTL page order (漫画・右開き)
+## Automatic RTL page order (漫画・右開き)
 
-Japanese manga EPUBs and CBZ/CBR files with right-to-left page order are detected
-automatically when you open them for the first time:
+Japanese manga EPUBs and CBZ/CBR/CBT comic archives with right-to-left page order
+are detected automatically when you open them for the first time:
 
 - **EPUB**: reads `page-progression-direction="rtl"` from the OPF spine
-- **CBZ/CBR**: reads the standard
+- **CBZ/CBR/CBT**: reads the standard
   `<Manga>YesAndRightToLeft</Manga>` value from `ComicInfo.xml`
   (`<ReadingDirection>RTL</ReadingDirection>` and `RightToLeft` are also
   accepted for compatibility)
 
-When RTL is detected a notification appears, the page-turn direction is reversed,
-and the progress bar fills from right (page 1) to left (last page).
+`ComicInfo.xml` may be at the archive root or in a subdirectory. The detector also
+handles namespaced XML, a UTF-8 BOM, comments, case differences in the archive path,
+and common separator/capitalization variants of the compatibility values.
+
+When RTL is detected a notification appears. Page turns—including physical left
+and right arrow keys—follow the RTL reading order, and the progress bar fills from
+right (page 1) to left (last page).
 
 You can always override the detected direction via
 **Menu → Taps & gestures → Page turns → Switch page-turn direction**.
@@ -158,10 +164,11 @@ project's main features, supported formats, and developer documentation.
 
 [English](#koreader-tategumi) | **日本語**
 
-**KOReader を日本語の縦書きに対応させた個人フォークです。**
+**KOReader を日本語の縦書きと右開き漫画に対応させた個人フォークです。**
 
-EPUB 形式の日本語小説向けに `writing-mode: vertical-rl` レンダリングを追加した
-[KOReader](https://github.com/koreader/koreader) のフォークです。
+日本語書籍向けの [KOReader](https://github.com/koreader/koreader) フォークです。
+EPUB 小説の `writing-mode: vertical-rl` レンダリングに加え、漫画 EPUB とコミック
+アーカイブの右から左（RTL）へのページ順序を自動検出します。
 upstream KOReader（master / nightly）と定期的に同期しています。
 
 ![三四郎（夏目漱石）の縦書き表示](doc/screenshots/tategumi.png)
@@ -209,18 +216,23 @@ Book-specific tweak**（長押しで編集）から以下を追加してくだ�
 body { writing-mode: vertical-rl !important; }
 ```
 
-## RTL ページ順序（漫画・右開き）
+## RTL ページ順序の自動検出（漫画・右開き）
 
-日本語の漫画 EPUB や、右から左へのページ順序を持つ CBZ/CBR ファイルは、
-初回オープン時に自動検出されます:
+日本語の漫画 EPUB や、右から左へのページ順序を持つ CBZ/CBR/CBT コミック
+アーカイブは、初回オープン時に自動検出されます:
 
 - **EPUB**: OPF spine の `page-progression-direction="rtl"` を読み取り
-- **CBZ/CBR**: `ComicInfo.xml` の標準指定
+- **CBZ/CBR/CBT**: `ComicInfo.xml` の標準指定
   `<Manga>YesAndRightToLeft</Manga>` を読み取り
   （互換性のため `<ReadingDirection>RTL</ReadingDirection>` と `RightToLeft` にも対応）
 
-RTL が検出されると通知が表示され、ページめくり方向が反転し、進捗バーは右
-（1 ページ目）から左（最終ページ）に進みます。
+`ComicInfo.xml` はアーカイブ直下だけでなくサブディレクトリ内にあっても検出
+されます。名前空間付き XML、UTF-8 BOM、コメント、アーカイブ内パスの大文字・
+小文字の違い、互換値の一般的な区切り・大文字表記の違いにも対応しています。
+
+RTL が検出されると通知が表示されます。物理キーボードの左右矢印を含むページ
+めくりが RTL の読書順序に従い、進捗バーは右（1 ページ目）から左（最終ページ）
+に進みます。
 
 検出された方向は **メニュー → タップとジェスチャー → ページめくり →
 ページめくり方向を切り替え** からいつでも上書きできます。変更内容は本ごとに
