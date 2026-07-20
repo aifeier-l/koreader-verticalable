@@ -29,7 +29,22 @@
           exec make -C base "$@"
         '';
         koreaderRun = pkgs.writeShellScriptBin "koreader-run" ''
-          exec make run "$@"
+          make
+
+          install_dir="$(
+            make -s --no-print-directory \
+              PHONY+=__print_install_dir \
+              --eval='__print_install_dir:;@printf "%s\\n" "$(INSTALL_DIR)"' \
+              __print_install_dir
+          )"
+          cd "$install_dir/koreader"
+
+          while true; do
+            status=0
+            ./luajit reader.lua "$@" || status=$?
+            [ "$status" -eq 85 ] || exit "$status"
+            set --
+          done
         '';
         koreaderTestBase = pkgs.writeShellScriptBin "koreader-test-base" ''
           exec base/test-runner/runtests "$@"
