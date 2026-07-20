@@ -1404,6 +1404,10 @@ function ReaderView:setupTouchZones()
 end
 
 function ReaderView:onToggleReadingOrder(toggle)
+    -- Unlike inverse_reading_order itself (which is serialized for every
+    -- document), this marker records an actual per-document user decision.
+    -- Automatic metadata detection must never overwrite that decision.
+    self.ui.doc_settings:makeTrue("page_direction_user_override")
     if toggle == nil then
         toggle = not self.inverse_reading_order
     end

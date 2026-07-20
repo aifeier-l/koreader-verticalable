@@ -9,8 +9,14 @@ describe("Reader auto page direction", function()
         function config:readSetting(name)
             return self.values[name]
         end
+        function config:isTrue(name)
+            return self.values[name] == true
+        end
         function config:saveSetting(name, value)
             self.values[name] = value
+        end
+        function config:makeTrue(name)
+            self.values[name] = true
         end
         return config
     end
@@ -85,15 +91,47 @@ describe("Reader auto page direction", function()
         assert.stub(PageDirection.getDirection).was_not_called()
     end)
 
-    it("preserves a per-document direction that predates auto-detection", function()
-        stub(PageDirection, "getDirection")
-        local detector = makeDetector(false)
+    it("does not mistake an automatically serialized LTR default for a user override", function()
+        stub(PageDirection, "getDirection").returns("rtl")
+        local detector, view = makeDetector(false)
         local config = makeConfig({ inverse_reading_order = false })
 
         detector:onReadSettings(config)
 
+        assert.stub(PageDirection.getDirection).was_called(1)
+        assert.is_true(view.inverse_reading_order)
+        assert.equals("rtl", config.values.direction_auto_detected)
+    end)
+
+    it("preserves an explicit per-document reading-order override", function()
+        stub(PageDirection, "getDirection")
+        local detector, view = makeDetector(false)
+        local config = makeConfig({
+            inverse_reading_order = false,
+            page_direction_user_override = true,
+        })
+
+        detector:onReadSettings(config)
+
         assert.stub(PageDirection.getDirection).was_not_called()
+        assert.is_false(view.inverse_reading_order)
         assert.is_nil(config.values.direction_auto_detected_version)
+    end)
+
+    it("marks reading-order toggles as explicit user overrides", function()
+        local ReaderView = require("apps/reader/modules/readerview")
+        local config = makeConfig()
+        local view = {
+            inverse_reading_order = false,
+            ui = { doc_settings = config },
+            setupTouchZones = function() end,
+            syncProgressBarDirection = function() end,
+        }
+
+        ReaderView.onToggleReadingOrder(view, true)
+
+        assert.is_true(config.values.page_direction_user_override)
+        assert.is_true(view.inverse_reading_order)
     end)
 
     it("versions an unknown result without changing the page direction", function()
