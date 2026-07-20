@@ -64,7 +64,7 @@ function ReaderAutoDirection:onReadSettings(config)
     -- ReaderView:onReadSettings ran first and set the bar for the non-detected
     -- value; re-apply now to reflect the auto-detected reading order.
     self.view.inverse_reading_order = not BD.mirroredUILayout()
-    self.view:setupTouchZones()
+    self.view:refreshPageTurnInput()
     self:_syncProgressBar()
     Notification:notify(_("RTL page order detected – switching automatically."))
 end

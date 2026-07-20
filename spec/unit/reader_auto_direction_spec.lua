@@ -27,7 +27,7 @@ describe("Reader auto page direction", function()
             setup_calls = 0,
             sync_calls = 0,
         }
-        function view:setupTouchZones()
+        function view:refreshPageTurnInput()
             self.setup_calls = self.setup_calls + 1
         end
         function view:syncProgressBarDirection()
@@ -124,7 +124,10 @@ describe("Reader auto page direction", function()
         local view = {
             inverse_reading_order = false,
             ui = { doc_settings = config },
-            setupTouchZones = function() end,
+            refresh_calls = 0,
+            refreshPageTurnInput = function(self)
+                self.refresh_calls = self.refresh_calls + 1
+            end,
             syncProgressBarDirection = function() end,
         }
 
@@ -132,6 +135,7 @@ describe("Reader auto page direction", function()
 
         assert.is_true(config.values.page_direction_user_override)
         assert.is_true(view.inverse_reading_order)
+        assert.equals(1, view.refresh_calls)
     end)
 
     it("versions an unknown result without changing the page direction", function()
