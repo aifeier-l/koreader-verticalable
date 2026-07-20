@@ -5,7 +5,8 @@ applies it to the reader view when the user has not made an explicit choice.
 Supported sources:
 - EPUB: `page-progression-direction` attribute on the OPF `<spine>` element
   (stored in document props by crengine's epubfmt.cpp, exposed via cre.cpp)
-- CBZ/CBR/CBT: `<ReadingDirection>` element inside ComicInfo.xml
+- CBZ/CBR/CBT: `<Manga>YesAndRightToLeft</Manga>` inside ComicInfo.xml,
+  with `<ReadingDirection>` accepted for compatibility
 
 This module is intentionally separate from ReaderView so that upstream
 merges to readerview.lua do not conflict with fork-specific detection logic.
@@ -15,29 +16,47 @@ view state set by ReaderView is already available.
 
 local BD = require("ui/bidi")
 local EventListener = require("ui/widget/eventlistener")
+local logger = require("logger")
 local Notification = require("ui/widget/notification")
 local _ = require("gettext")
 
 local ReaderAutoDirection = EventListener:extend{}
+ReaderAutoDirection.DETECTION_VERSION = 2
 
 function ReaderAutoDirection:onReadSettings(config)
-    -- "direction_auto_detected" is written the first time we successfully detect
-    -- a direction for this document.  Once set, we defer entirely to whatever
-    -- inverse_reading_order the user (or the previous auto-run) left behind.
-    -- This avoids re-detecting on every open while still letting the user override.
-    if config:has("direction_auto_detected") then return end
+    -- inverse_reading_order is serialized for every document on close, even
+    -- when it only contains the default value. Only this explicit marker can
+    -- distinguish a user override from such an automatically saved default.
+    if config:isTrue("page_direction_user_override") then
+        logger.dbg("ReaderAutoDirection: preserving explicit user override for", self.document.file)
+        return
+    end
+
+    local detected_version = tonumber(config:readSetting("direction_auto_detected_version")) or 0
+    if detected_version >= self.DETECTION_VERSION then
+        logger.dbg("ReaderAutoDirection: current detection already recorded for", self.document.file)
+        return
+    end
+
+    local has_legacy_detection = config:has("direction_auto_detected")
 
     -- Global RTL default already in effect – nothing to do.
-    if self.view.inverse_reading_order then return end
+    if not has_legacy_detection and self.view.inverse_reading_order then
+        logger.dbg("ReaderAutoDirection: global RTL default already applies to", self.document.file)
+        return
+    end
 
     local ok, PageDirection = pcall(require, "util/page_direction")
     if not ok then return end
 
     local dir = PageDirection.getDirection(self.document)
+    logger.dbg("ReaderAutoDirection: detected", dir, "for", self.document.file)
 
     -- Mark detection as done regardless of outcome so we don't re-scan on
-    -- every open (the result is stored in inverse_reading_order itself).
+    -- every open. The version lets corrected detectors revisit only results
+    -- produced by an older implementation.
     config:saveSetting("direction_auto_detected", dir or "none")
+    config:saveSetting("direction_auto_detected_version", self.DETECTION_VERSION)
 
     if dir ~= "rtl" then return end
 
@@ -45,7 +64,7 @@ function ReaderAutoDirection:onReadSettings(config)
     -- ReaderView:onReadSettings ran first and set the bar for the non-detected
     -- value; re-apply now to reflect the auto-detected reading order.
     self.view.inverse_reading_order = not BD.mirroredUILayout()
-    self.view:setupTouchZones()
+    self.view:refreshPageTurnInput()
     self:_syncProgressBar()
     Notification:notify(_("RTL page order detected – switching automatically."))
 end

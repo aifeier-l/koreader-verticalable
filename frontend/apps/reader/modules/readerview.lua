@@ -1403,7 +1403,17 @@ function ReaderView:setupTouchZones()
     (self.ui.rolling or self.ui.paging):setupTouchZones()
 end
 
+function ReaderView:refreshPageTurnInput()
+    local navigator = self.ui.rolling or self.ui.paging
+    navigator:setupTouchZones()
+    navigator:registerKeyEvents()
+end
+
 function ReaderView:onToggleReadingOrder(toggle)
+    -- Unlike inverse_reading_order itself (which is serialized for every
+    -- document), this marker records an actual per-document user decision.
+    -- Automatic metadata detection must never overwrite that decision.
+    self.ui.doc_settings:makeTrue("page_direction_user_override")
     if toggle == nil then
         toggle = not self.inverse_reading_order
     end
@@ -1412,7 +1422,7 @@ function ReaderView:onToggleReadingOrder(toggle)
         -- User made an explicit choice: it is no longer a vertical-rl forced value,
         -- so persist it from now on (see ReaderView:onSaveSettings).
         self.inverse_reading_order_forced = false
-        self:setupTouchZones()
+        self:refreshPageTurnInput()
         local is_rtl = self.inverse_reading_order ~= BD.mirroredUILayout() -- mirrored reading
         Notification:notify(is_rtl and _("RTL page turning.") or _("LTR page turning."))
         -- Keep progress bar direction in sync with reading order.
