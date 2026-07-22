@@ -53,8 +53,9 @@ layout code continue to work with minimal fork-only glue.
   right-to-left and glyphs top-to-bottom.
 - Ruby/inline-box layout uses the inline box's `getY()` as a vertical offset,
   with the ruby group drawn at the accumulated column advance.
-- Latin and ruby-depth fixes live in `lvtextfm.cpp`; check the nearby comments
-  and the `vertical_ruby_column_spec.lua` regression when changing them.
+- Vertical word, ruby, image and draw adaptations live in `lvtextfm_vert.cpp`,
+  with compact hooks in `lvtextfm.cpp`; check `vertical_ruby_column_spec.lua`
+  and the related vertical regression specs when changing them.
 
 ### Glyph placement in vertical mode (lvfntman.cpp + lvfntman_vert.{h,cpp})
 
@@ -190,8 +191,11 @@ base/                                           crengine submodule
   thirdparty/kpvcrlib/crengine/crengine/
     include/lvlogical.h                         CSS logical property index helpers
     include/lvtextfm_fork.h                     Fork-only decls + VerticalDrawState struct
+    include/lvtextfm_vert_diag.h                Vertical formatter diagnostic API
     include/lvfntman_vert.h                     JFM class enum, vert metrics cache decls
+    include/lvrend_vert_diag.h                  Vertical renderer diagnostic API
     src/lvrend.cpp                              Block rendering, FlowState
+    src/lvrend_vert_diag.cpp                    Encapsulated vertical renderer counters
     src/lvtextfm_vert.cpp                       Vertical paragraph layout, kinsoku/oidashi/xkanjiskip (fork-only, #included by lvtextfm.cpp)
     src/lvtextfm.cpp                            measureText, ruby inline box
     src/lvfntman_vert.cpp                       JFM class tables, vform, slot width, glyph rotation (fork-only; absorbed former lvfntman_vert_slot.cpp)
