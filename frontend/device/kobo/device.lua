@@ -978,15 +978,19 @@ function Kobo:init()
         self:toggleKeyRepeat(false)
     end
 
-    -- Switch to the proper packages on FW 5.x
-    -- NOTE: We don't distribute kobov4 binaries, the omission is on purpose.
-    if util.fileExists("/usr/bin/hwdetect.sh") then
-        self.ota_model = "kobov5"
-    end
-
     -- Finally, Let Generic properly setup the standard stuff.
     -- (Of particular import, this needs to come *after* we've set our input hooks, so that the viewport translation runs last).
     Generic.init(self)
+end
+
+function Kobo:otaModel()
+    local model = "kobo"
+    -- Switch to the proper packages on FW 5.x
+    -- NOTE: We don't distribute kobov4 binaries, the omission is on purpose.
+    if util.fileExists("/usr/bin/hwdetect.sh") then
+        model = "kobov5"
+    end
+    return model, "ota"
 end
 
 function Kobo:exit()
@@ -1157,6 +1161,14 @@ local function getCodeName()
     -- If that fails, run the script ourselves
     if not codename then
         local std_out = io.popen("/bin/kobo_config.sh 2>/dev/null", "re")
+        if std_out then
+            codename = std_out:read("*line")
+            std_out:close()
+        end
+    end
+    -- If that fails, run another script (since kobo v5 firmware)
+    if not codename then
+        local std_out = io.popen("/usr/bin/hwdetect.sh 2>/dev/null", "re")
         if std_out then
             codename = std_out:read("*line")
             std_out:close()
