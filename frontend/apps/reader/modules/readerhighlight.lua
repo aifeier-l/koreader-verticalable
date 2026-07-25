@@ -954,6 +954,7 @@ function ReaderHighlight:clear(clear_id)
     end
     self.is_word_selection = false
     self.selected_text_start_xpointer = nil
+    self.selected_text_start_word_end_xpointer = nil
     if self.hold_pos then
         self.hold_pos = nil
         self.selected_text = nil
@@ -1752,6 +1753,7 @@ function ReaderHighlight:onHold(arg, ges)
             -- a marker when back from across-pages text selection, which
             -- is handled in onHoldPan()
             self.selected_text_start_xpointer = word.pos0
+            self.selected_text_start_word_end_xpointer = word.pos1
         end
         return true
     end
@@ -1957,7 +1959,8 @@ function ReaderHighlight:onHoldPan(_, ges)
         end
     end
 
-    local old_text = self.selected_text and self.selected_text.text
+    local old_selection = self.selected_text
+    local old_text = old_selection and old_selection.text
     -- For vertical-rl rolling documents, native crengine selection draws
     -- per-word boxes (scattered) rather than column-spanning boxes.
     -- Use Lua-side drawing via view.highlight.temp for cleaner appearance.
@@ -1977,6 +1980,7 @@ function ReaderHighlight:onHoldPan(_, ges)
             -- and spans quite some height, the marker could point away
             -- from the start position)
             self.selected_text_start_xpointer = self.selected_text.pos0
+            self.selected_text_start_word_end_xpointer = self.selected_text.pos1
         end
     end
 
@@ -1987,23 +1991,37 @@ function ReaderHighlight:onHoldPan(_, ges)
     -- a range bounded by current-page positions only, losing the multi-page
     -- extent.  Re-anchor the selection start with the original press
     -- xpointer (still tracked in self.selected_text_start_xpointer) and
-    -- recompute text + sboxes from that anchor to the finger end.
+    -- recompute text + sboxes from that anchor to the finger end.  We must
+    -- resolve the finger end independently: getTextFromPositions() orders its
+    -- two results, so its pos1 may belong to the stale hold_pos rather than to
+    -- the current finger position.  Using that ordered pos1 made it impossible
+    -- to shorten the selection beyond that stale position on the new page.
     if is_vertical and self.ui.rolling and self.restore_page_mode_func
-            and self.selected_text and self.selected_text.pos1
             and self.selected_text_start_xpointer then
         local sx = self.selected_text_start_xpointer
-        local cur = self.selected_text.pos1
-        if sx ~= cur then
+        local finger_word = self.ui.document:getWordFromPosition(self.holdpan_pos, true)
+        if finger_word and finger_word.pos0 and finger_word.pos1 then
             local pos0, pos1
-            if self.ui.document:compareXPointers(sx, cur) == 1 then
-                pos0, pos1 = sx, cur   -- sx precedes cur in doc order
-            else
-                pos0, pos1 = cur, sx
+            local order = self.ui.document:compareXPointers(sx, finger_word.pos1)
+            if order == 1 then
+                -- The finger is after the initial word in document order.
+                pos0, pos1 = sx, finger_word.pos1
+            elseif order then
+                -- The finger is before the initial word.  Keep the complete
+                -- initial word selected just as an ordinary drag does.
+                pos0 = finger_word.pos0
+                pos1 = self.selected_text_start_word_end_xpointer or sx
             end
-            self.selected_text.pos0 = pos0
-            self.selected_text.pos1 = pos1
-            self.selected_text.text  = self.ui.document:getTextFromXPointers(pos0, pos1, true)
-            self.selected_text.sboxes = self.ui.document:getScreenBoxesFromPositions(pos0, pos1, true)
+            if pos0 and pos1 then
+                self.selected_text = self.selected_text or {}
+                self.selected_text.pos0 = pos0
+                self.selected_text.pos1 = pos1
+                self.selected_text.text  = self.ui.document:getTextFromXPointers(pos0, pos1, true)
+                self.selected_text.sboxes = self.ui.document:getScreenBoxesFromPositions(pos0, pos1, true)
+            end
+        elseif old_selection then
+            -- Keep the last valid cross-page range while crossing whitespace.
+            self.selected_text = old_selection
         end
     end
 
