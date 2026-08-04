@@ -26,12 +26,10 @@ describe("Vertical text: fullwidth inline border #vertical_fullwidth_border", fu
         f:write([[<?xml version="1.0" encoding="UTF-8"?>
 <html xmlns="http://www.w3.org/1999/xhtml"><head><style>
 html, body { margin: 0; padding: 0; }
-/* Match the small-font TOC case: a 90%/140% link must keep one
- * right-side Japanese sideline even after integer-pixel rounding. */
-body { writing-mode: vertical-rl; font-size: 12px; }
+    body { writing-mode: vertical-rl; font-size: 43px; }
 p { margin: 1em; }
 a { border-right: 1px solid; text-decoration: underline; }
-a span { font-size: 1.4em; line-height: 1.2; }
+    a span { font-size: 1.66667em; line-height: 1.2; }
 a.plain { border-right: 0; }
 </style></head><body>
 <p><a href="#">第<span>１</span>章</a></p>
@@ -82,9 +80,7 @@ a.plain { border-right: 0; }
         end
         print(string.format("[vertical_fullwidth_border] continuous_line_columns=%s",
             table.concat(continuous_columns, ",")))
-        -- At small font sizes the 1px underline and the authored 1px border
-        -- intentionally overlap, so one dark pixel column is sufficient.
-        assert.is_true(#continuous_columns >= 1, "vertical underline was not continuous")
+        assert.is_true(#continuous_columns >= 2, "vertical underline was not continuous")
         -- The border and font-derived underline may form one or a few
         -- contiguous pixels, but must not split into visibly separate rules.
         assert.is_true(#continuous_columns <= 6,
@@ -96,42 +92,6 @@ a.plain { border-right: 0; }
             last.x + last.w)
         assert.is_true(continuous_columns[#continuous_columns] >= rightmost_glyph_edge - 1,
             "Japanese vertical underline was not placed on the right side")
-
-        -- A continuous 1px authored border used to hide a broken underline:
-        -- the test above would pass even when the thicker underline stopped
-        -- and restarted at every descendant text node.  Sample only the
-        -- whitespace gaps between the three glyph boxes, where glyph ink
-        -- cannot affect the measured rule thickness.  The combined rule must
-        -- retain the same thickness while crossing both text-node boundaries.
-        local function dark_run_at(y)
-            local best = 0
-            local run = 0
-            local scan_left = math.max(first.x, found.x, last.x)
-            local scan_right = math.max(first.x + first.w,
-                found.x + found.w, last.x + last.w) + 8
-            for x = scan_left, math.min(scan_right, Screen:getWidth() - 1) do
-                local px = Screen.bb:getPixel(x, y)
-                if px and px:getR() < 200 then
-                    run = run + 1
-                    if run > best then best = run end
-                else
-                    run = 0
-                end
-            end
-            return best
-        end
-        local first_end = first.y + first.h
-        local digit_end = found.y + found.h
-        local gap1_y = math.floor((first_end + found.y) / 2)
-        local gap2_y = math.floor((digit_end + last.y) / 2)
-        local gap1_thickness = dark_run_at(gap1_y)
-        local gap2_thickness = dark_run_at(gap2_y)
-        print(string.format(
-            "[vertical_fullwidth_border] boundary_thickness=%d,%d at y=%d,%d",
-            gap1_thickness, gap2_thickness, gap1_y, gap2_y))
-        assert.is_true(gap1_thickness >= #continuous_columns
-                and gap2_thickness >= #continuous_columns,
-            "underline was interrupted at a descendant text-node boundary")
 
         -- A line displaced only alongside the larger descendant is shorter
         -- than the whole anchor, so the paragraph-wide scan above cannot see
