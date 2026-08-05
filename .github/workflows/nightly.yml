@@ -422,6 +422,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Fetch kotasync source
+        run: git submodule update --init --recursive base
+
       - name: Set nightly version (YYYY.MM.DD)
         # Use the version computed in check-changes so we agree with what the
         # build jobs embedded via RELEASE_TAG (otherwise OTA Filename and the
