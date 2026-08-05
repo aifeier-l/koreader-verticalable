@@ -61,7 +61,7 @@ jobs:
         # Shared across all build/publish jobs so the embedded git-rev and the
         # OTA zsync Filename header agree. Otherwise OTAManager parses two
         # different version strings and offers an update on every check.
-        run: echo "nightly_version=v$(date -u +%Y.%m.%d)" >> "$GITHUB_OUTPUT"
+        run: echo "nightly_version=v$(date -u +%Y.%m.%d)-${{ github.run_number }}" >> "$GITHUB_OUTPUT"
 
   kindle:
     name: Kindle
