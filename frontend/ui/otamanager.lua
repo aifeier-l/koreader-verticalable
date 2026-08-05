@@ -26,6 +26,8 @@ local OTAManager = {
     -- NOTE: Each URL *MUST* end with a /
     -- Keyed by channel name; getOTAServer() auto-selects based on getOTAChannel().
     ota_servers = {
+        -- kotasync and the legacy zsync manifests are co-published here so
+        -- builds using either updater can keep updating without a migration.
         stable  = "https://github.com/m-tky/koreader-tategumi/releases/latest/download/",
         nightly = "https://github.com/m-tky/koreader-tategumi/releases/download/nightly/",
     },
