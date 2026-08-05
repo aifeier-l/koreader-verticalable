@@ -488,19 +488,27 @@ jobs:
           # Meson even though the resulting AppRun is only used for manifests.
           sudo apt-get update -qq && sudo apt-get install -y meson
           make -C base/kotasync appdir
-          echo "KOTASYNC=$(find "$PWD/base/build" -path '*/AppDir/AppRun' -type f -print -quit)" >> "$GITHUB_ENV"
+          KOTASYNC=$(find "$PWD/base/kotasync/build" -path '*/AppDir/AppRun' -type f -print -quit)
+          test -n "$KOTASYNC"
+          echo "KOTASYNC=$KOTASYNC" >> "$GITHUB_ENV"
 
       - name: Generate kotasync files
         run: |
           set -euo pipefail
           VER=$NIGHTLY_VERSION
           shopt -s globstar
-          cp "artifacts/kobo/koreader-kobo-$VER.tar.xz" "artifacts/kobo/koreader-kobov5-$VER.tar.xz"
-          cp "artifacts/kindle/koreader-kindle-$VER.tar.xz" "artifacts/kindle/koreader-kindle-legacy-$VER.tar.xz"
+          # Package filenames carry a build-date suffix in addition to the
+          # RELEASE_TAG (e.g., v2026.08.05-77_2026-08-06.tar.xz).
+          # Preserve it in aliases while making the manifest endpoints stable.
+          kobo_package=$(compgen -G "artifacts/kobo/koreader-kobo-$VER*.tar.xz" | head -n1)
+          kindle_package=$(compgen -G "artifacts/kindle/koreader-kindle-$VER*.tar.xz" | head -n1)
+          test -n "$kobo_package" && test -n "$kindle_package"
+          cp "$kobo_package" "${kobo_package/koreader-kobo-/koreader-kobov5-}"
+          cp "$kindle_package" "${kindle_package/koreader-kindle-/koreader-kindle-legacy-}"
           for package in artifacts/**/*.tar.xz; do
             name=$(basename "$package")
-            latest_name="${name/$VER/latest-nightly}"
-            "$KOTASYNC" make "$package" "$(dirname "$package")/${latest_name%.tar.xz}.kotasync"
+            latest_name="${name%%-$VER*}-latest-nightly.kotasync"
+            "$KOTASYNC" make "$package" "$(dirname "$package")/$latest_name"
           done
 
       - name: List artifacts
