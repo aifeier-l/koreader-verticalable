@@ -1181,6 +1181,23 @@ The menu checkbox "Hide non-linear fragments" will then be available after the d
             },
         }
     },
+    {
+        title = _("Vertical text (縦書き)"),
+        {
+            id = "vertical_rl_on",
+            title = _("縦書き ON (vertical-rl)"),
+            description = _("Force vertical-rl writing mode. Requires the tategumi fork's crengine support. Tap to toggle for this book, hold to set as global default."),
+            css = [[body { writing-mode: vertical-rl !important; }]],
+            priority = 1000,
+        },
+        {
+            id = "vertical_rl_off",
+            title = _("横書き ON (horizontal-tb)"),
+            description = _("Force horizontal-tb, to override a book's own vertical-rl CSS."),
+            css = [[body { writing-mode: horizontal-tb !important; }]],
+            priority = 1000,
+        },
+    },
     -- No current need for workarounds
     -- {
     --     title = _("Workarounds"),
