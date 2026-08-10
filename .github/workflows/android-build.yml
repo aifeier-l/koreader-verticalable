@@ -1,0 +1,96 @@
+# Reusable Android build (arm + arm64), used by the upstream-sync workflow.
+# Mirrors the Android steps in nightly.yml: builds with the koreader Android
+# toolchain and signs with an ephemeral debug keystore (no secrets required).
+
+name: Android build (reusable)
+
+on:
+  workflow_call:
+
+jobs:
+  android-arm:
+    name: Android (ARM)
+    runs-on: ubuntu-latest
+    container:
+      image: koreader/koandroid:latest
+    env:
+      BASH_ENV: /home/ko/.bashrc
+      TARGET: android
+      ANDROID_ARCH: arm
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch submodules
+        run: make fetchthirdparty
+      - name: Build
+        run: make TARGET=android
+      - name: Package
+        run: make TARGET=android update
+      - name: Sign APK (debug keystore)
+        run: |
+          KEYSTORE=/tmp/debug.keystore
+          if [ ! -f "$KEYSTORE" ]; then
+            keytool -genkeypair -v \
+              -keystore "$KEYSTORE" -storepass android -alias androiddebugkey \
+              -keypass android -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
+          APKSIGNER=$(find "${ANDROID_HOME}/build-tools" -name apksigner | sort -V | tail -1)
+          "${APKSIGNER}" sign \
+            --ks "$KEYSTORE" \
+            --ks-pass "pass:android" \
+            --key-pass "pass:android" \
+            --ks-key-alias "androiddebugkey" \
+            koreader-android-*.apk
+          rm -f "$KEYSTORE"
+      - name: Rename for sync build
+        run: cp koreader-android-*.apk koreader-android-latest-sync.apk 2>/dev/null || \
+             cp koreader-android-*.zip koreader-android-latest-sync.zip 2>/dev/null || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-arm
+          path: koreader-android-latest-sync.*
+
+  android-arm64:
+    name: Android (ARM64)
+    runs-on: ubuntu-latest
+    container:
+      image: koreader/koandroid:latest
+    env:
+      BASH_ENV: /home/ko/.bashrc
+      TARGET: android
+      ANDROID_ARCH: arm64
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch submodules
+        run: make fetchthirdparty
+      - name: Build
+        run: make TARGET=android ANDROID_ARCH=arm64
+      - name: Package
+        run: make TARGET=android ANDROID_ARCH=arm64 update
+      - name: Sign APK (debug keystore)
+        run: |
+          KEYSTORE=/tmp/debug.keystore
+          if [ ! -f "$KEYSTORE" ]; then
+            keytool -genkeypair -v \
+              -keystore "$KEYSTORE" -storepass android -alias androiddebugkey \
+              -keypass android -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
+          APKSIGNER=$(find "${ANDROID_HOME}/build-tools" -name apksigner | sort -V | tail -1)
+          "${APKSIGNER}" sign \
+            --ks "$KEYSTORE" \
+            --ks-pass "pass:android" \
+            --key-pass "pass:android" \
+            --ks-key-alias "androiddebugkey" \
+            koreader-android-arm64-*.apk
+          rm -f "$KEYSTORE"
+      - name: Rename for sync build
+        run: cp koreader-android-arm64-*.apk koreader-android-arm64-latest-sync.apk || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-arm64
+          path: koreader-android-arm64-latest-sync.apk
