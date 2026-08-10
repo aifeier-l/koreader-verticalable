@@ -36,6 +36,7 @@ local ReaderCropping = require("apps/reader/modules/readercropping")
 local ReaderDeviceStatus = require("apps/reader/modules/readerdevicestatus")
 local ReaderDictionary = require("apps/reader/modules/readerdictionary")
 local ReaderFont = require("apps/reader/modules/readerfont")
+local ReaderVertical = require("apps/reader/modules/readervertical")
 local ReaderGoto = require("apps/reader/modules/readergoto")
 local ReaderHandMade = require("apps/reader/modules/readerhandmade")
 local ReaderHinting = require("apps/reader/modules/readerhinting")
@@ -365,6 +366,10 @@ function ReaderUI:init()
             configurable = self.document.configurable,
             dialog = self.dialog,
             view = self.view,
+            ui = self
+        })
+        -- vertical text settings (tategumi fork)
+        self:registerModule("vertical", ReaderVertical:new{
             ui = self
         })
         -- user hyphenation (must be registered before typography)

@@ -1323,6 +1323,11 @@ function CreDocument:setFontKerning(mode)
     self._document:setIntProperty("font.kerning.mode", mode)
 end
 
+function CreDocument:setVertPunctMode(mode)
+    logger.dbg("CreDocument: set vertical punctuation mode", mode)
+    self._document:setIntProperty("vert.punct.mode", mode)
+end
+
 function CreDocument:setWordSpacing(values)
     -- values should be a table of 2 numbers (e.g.: { 90, 75 })
     -- - space width scale percent (hard scale the width of each space char in
