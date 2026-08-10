@@ -7,6 +7,7 @@
 local Event = require("ui/event")
 local logger = require("logger")
 local WidgetContainer = require("ui/widget/container/widgetcontainer")
+local _ = require("gettext")
 
 local ReaderVertical = WidgetContainer:extend{
     name = "vertical",
