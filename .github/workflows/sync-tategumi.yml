@@ -1,14 +1,12 @@
-name: Sync from upstream koreader
+name: Sync from upstream f-coco/koreader-tategumi
 
-# DISABLED: use .github/workflows/sync-tategumi.yml instead
-# (syncs from f-coco/koreader-tategumi).
-# on:
-#   schedule:
-#     - cron: '0 9 * * 5'  # Friday at 09:00 UTC (18:00 JST)
-#   workflow_dispatch:
+on:
+  schedule:
+    - cron: '0 9 * * 5'  # Friday at 09:00 UTC (18:00 JST)
+  workflow_dispatch:
 
 concurrency:
-  group: sync-upstream
+  group: sync-tategumi
   cancel-in-progress: false
 
 jobs:
@@ -30,40 +28,35 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
 
-      - name: Fetch upstream
+      - name: Fetch upstream f-coco/koreader-tategumi
         run: |
-          git remote add upstream https://github.com/koreader/koreader.git
+          git remote add upstream https://github.com/f-coco/koreader-tategumi.git
           git fetch upstream master
 
-      - name: Merge from upstream koreader
+      - name: Merge from f-coco/koreader-tategumi
         run: |
-          resolve_ours() {
-            file_path="$1"
-            stage2="$(git ls-files -u -- "$file_path" | awk '$3 == 2 { print $1 " " $2; exit }')"
-            if [ -z "$stage2" ]; then
-              return 0
-            fi
-
-            mode="${stage2%% *}"
-            sha="${stage2#* }"
-            if [ "$mode" = "160000" ]; then
-              git update-index --cacheinfo "$mode,$sha,$file_path"
-            else
-              git checkout --ours -- "$file_path"
-              git add "$file_path"
-            fi
-          }
-
-          restore_our_pins() {
-            resolve_ours .gitmodules
-            resolve_ours base
-            resolve_ours test
+          resolve_conflicts() {
+            for file in $(git diff --name-only --diff-filter=U); do
+              case "$file" in
+                .github/workflows/*)
+                  # Keep our local CI customization (Android-only release,
+                  # disabled nightly, etc.) on conflict.
+                  git checkout --ours -- "$file"
+                  git add "$file"
+                  ;;
+                base|test|.gitmodules)
+                  # Follow upstream's submodule chain.
+                  git checkout --theirs -- "$file"
+                  git add "$file"
+                  ;;
+              esac
+            done
           }
 
           if git merge upstream/master --no-edit; then
             echo "MERGE_FAILED=false" >> $GITHUB_ENV
           else
-            restore_our_pins
+            resolve_conflicts
             REMAINING_CONFLICTS="$(git diff --name-only --diff-filter=U)"
             if [ -z "$REMAINING_CONFLICTS" ]; then
               git commit --no-edit
@@ -76,30 +69,12 @@ jobs:
             BRANCH="upstream-sync-$(date +%Y%m%d)"
             git checkout -b "$BRANCH"
             git merge upstream/master --no-edit || true
-            restore_our_pins
+            resolve_conflicts
             git add -A
             git commit -m "WIP: upstream sync $(date +%Y-%m-%d) — conflicts need resolution"
             git push origin "$BRANCH"
             echo "MERGE_FAILED=true" >> $GITHUB_ENV
             echo "SYNC_BRANCH=$BRANCH" >> $GITHUB_ENV
-          fi
-
-      - name: Restore our submodule pins (base, test, and .gitmodules)
-        if: env.MERGE_FAILED != 'true'
-        run: |
-          # ORIG_HEAD is only set when a merge commit was created.
-          # If upstream had nothing new, skip this step entirely.
-          if ! git rev-parse --verify ORIG_HEAD > /dev/null 2>&1; then
-            echo "Already up to date — nothing to restore."
-            exit 0
-          fi
-          CHANGED=0
-          git checkout ORIG_HEAD -- .gitmodules base test
-          if ! git diff --cached --quiet; then
-            CHANGED=1
-          fi
-          if [ "$CHANGED" = "1" ]; then
-            git commit --amend --no-edit
           fi
 
       - name: Push
@@ -122,5 +97,5 @@ jobs:
               title: `Upstream sync ${new Date().toISOString().slice(0,10)}: conflicts need resolution`,
               head: process.env.SYNC_BRANCH,
               base: 'master',
-              body: `Automatic sync from koreader/koreader failed due to merge conflicts.\n\nThis PR contains the conflicted state — please resolve the markers and merge.\n\nWorkflow run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              body: `Automatic sync from f-coco/koreader-tategumi failed due to merge conflicts.\n\nThis PR contains the conflicted state — please resolve the markers and merge.\n\nWorkflow run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
             });
