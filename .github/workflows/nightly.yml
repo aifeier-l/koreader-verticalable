@@ -4,6 +4,19 @@ on:
   schedule:
     - cron: '0 20 * * *'   # 05:00 JST daily
   workflow_dispatch:
+    inputs:
+      build_android:
+        description: Build Android (arm + arm64)
+        type: boolean
+        default: true
+      build_kobo:
+        description: Build Kobo
+        type: boolean
+        default: false
+      build_pocketbook:
+        description: Build PocketBook
+        type: boolean
+        default: false
 
 concurrency:
   group: ${{ github.workflow }}
@@ -65,7 +78,7 @@ jobs:
   kobo:
     name: Kobo
     needs: check-changes
-    if: needs.check-changes.outputs.should_build == 'true'
+    if: "needs.check-changes.outputs.should_build == 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.build_kobo == 'true')"
     runs-on: ubuntu-latest
     container:
       image: koreader/kokobo:latest
@@ -98,7 +111,7 @@ jobs:
   pocketbook:
     name: PocketBook
     needs: check-changes
-    if: needs.check-changes.outputs.should_build == 'true'
+    if: "needs.check-changes.outputs.should_build == 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.build_pocketbook == 'true')"
     runs-on: ubuntu-latest
     container:
       image: koreader/kopb:latest
