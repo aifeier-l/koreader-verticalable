@@ -1,240 +1,240 @@
 # =============================================================================
-# nightly 已注释停用(本项目仅发布正式版 Android)。
-# 如需恢复每日构建:删除本文件所有行首的 '#' 即可。
-# 注意:恢复前请将 OTA_BASE_URL 改为 https://github.com/aifeier-l/koreader-verticalable/...
+# Nightly builds — 已停用每日自动调度(schedule 已注释),仅保留手动触发。
+# 如需恢复每日构建:取消注释 on: 里的 schedule 块。
 # =============================================================================
-#name: Nightly builds
+name: Nightly builds
 
-#on:
-#  schedule:
-#    - cron: '0 20 * * *'   # 05:00 JST daily
-#  workflow_dispatch:
-#    inputs:
-#      build_android:
-#        description: Build Android (arm + arm64)
-#        type: boolean
-#        default: true
-#      build_kobo:
-#        description: Build Kobo
-#        type: boolean
-#        default: false
-#      build_pocketbook:
-#        description: Build PocketBook
-#        type: boolean
-#        default: false
+# on: 已停用每日自动构建(本项目仅发布正式版 Android)。如需恢复,取消注释下面两行 schedule。
+on:
+  # schedule:
+  #   - cron: '0 20 * * *'   # 05:00 JST daily
+  workflow_dispatch:
+    inputs:
+      build_android:
+        description: Build Android (arm + arm64)
+        type: boolean
+        default: true
+      build_kobo:
+        description: Build Kobo
+        type: boolean
+        default: false
+      build_pocketbook:
+        description: Build PocketBook
+        type: boolean
+        default: false
 
-#concurrency:
-#  group: ${{ github.workflow }}
-#  cancel-in-progress: true
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
 
-#defaults:
-#  run:
-#    shell: bash
+defaults:
+  run:
+    shell: bash
 
-#env:
-#  MAKEFLAGS: "PARALLEL_JOBS=3 OUTPUT_DIR=build"
-#  # OTA base URL for nightly zsync — points to the 'nightly' tagged release.
-#  # (Cannot use /releases/latest because nightly is a prerelease.)
-#  OTA_BASE_URL: "https://github.com/m-tky/koreader-tategumi/releases/download/nightly"
+env:
+  MAKEFLAGS: "PARALLEL_JOBS=3 OUTPUT_DIR=build"
+  # OTA base URL for nightly zsync — points to the 'nightly' tagged release.
+  # (Cannot use /releases/latest because nightly is a prerelease.)
+  OTA_BASE_URL: "https://github.com/aifeier-l/koreader-verticalable/releases/download/nightly"
 
-#jobs:
-#  check-changes:
-#    name: Check for source changes
-#    runs-on: ubuntu-latest
-#    outputs:
-#      should_build: ${{ steps.check.outputs.should_build }}
-#      nightly_version: ${{ steps.version.outputs.nightly_version }}
-#    steps:
-#      - uses: actions/checkout@v4
-#        with:
-#          fetch-depth: 0
-#      - name: Check changes since last nightly
-#        id: check
-#        run: |
-#          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-#            echo "Manual trigger — building unconditionally."
-#            echo "should_build=true" >> "$GITHUB_OUTPUT"
-#            exit 0
-#          fi
-#          git fetch origin --tags --quiet
-#          LAST=$(git rev-list -1 nightly 2>/dev/null || echo "")
-#          if [ -z "$LAST" ]; then
-#            echo "No previous nightly tag — building."
-#            echo "should_build=true" >> "$GITHUB_OUTPUT"
-#            exit 0
-#          fi
-#          CHANGED=$(git diff --name-only "$LAST" HEAD | \
-#            grep -E '^(frontend/|plugins/|base$|test$|resources/|reader\.lua$|Makefile$|CMakeLists\.txt$|kodev$|.*\.lua$)' || true)
-#          if [ -n "$CHANGED" ]; then
-#            echo "Source changes detected:"
-#            echo "$CHANGED"
-#            echo "should_build=true" >> "$GITHUB_OUTPUT"
-#          else
-#            echo "No source changes since last nightly — skipping build."
-#            echo "should_build=false" >> "$GITHUB_OUTPUT"
-#          fi
-#      - name: Compute nightly version
-#        id: version
-#        # Shared across all build/publish jobs so the embedded git-rev and the
-#        # OTA zsync Filename header agree. Otherwise OTAManager parses two
-#        # different version strings and offers an update on every check.
-#        run: echo "nightly_version=v$(date -u +%Y.%m.%d)-${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+jobs:
+  check-changes:
+    name: Check for source changes
+    runs-on: ubuntu-latest
+    outputs:
+      should_build: ${{ steps.check.outputs.should_build }}
+      nightly_version: ${{ steps.version.outputs.nightly_version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check changes since last nightly
+        id: check
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Manual trigger — building unconditionally."
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git fetch origin --tags --quiet
+          LAST=$(git rev-list -1 nightly 2>/dev/null || echo "")
+          if [ -z "$LAST" ]; then
+            echo "No previous nightly tag — building."
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          CHANGED=$(git diff --name-only "$LAST" HEAD | \
+            grep -E '^(frontend/|plugins/|base$|test$|resources/|reader\.lua$|Makefile$|CMakeLists\.txt$|kodev$|.*\.lua$)' || true)
+          if [ -n "$CHANGED" ]; then
+            echo "Source changes detected:"
+            echo "$CHANGED"
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No source changes since last nightly — skipping build."
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Compute nightly version
+        id: version
+        # Shared across all build/publish jobs so the embedded git-rev and the
+        # OTA zsync Filename header agree. Otherwise OTAManager parses two
+        # different version strings and offers an update on every check.
+        run: echo "nightly_version=v$(date -u +%Y.%m.%d)-${{ github.run_number }}" >> "$GITHUB_OUTPUT"
 
-#  kobo:
-#    name: Kobo
-#    needs: check-changes
-#    if: "needs.check-changes.outputs.should_build == 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.build_kobo == 'true')"
-#    runs-on: ubuntu-latest
-#    container:
-#      image: koreader/kokobo:latest
-#    env:
-#      BASH_ENV: /home/ko/.bashrc
-#      TARGET: kobo
-#      RELEASE_TAG: ${{ needs.check-changes.outputs.nightly_version }}
-#    steps:
-#      - uses: actions/checkout@v4
-#        with:
-#          fetch-depth: 0
-#      - name: Fetch submodules
-#        run: make fetchthirdparty
-#      - name: Build
-#        run: make TARGET=kobo
-#      - name: Package
-#        run: make TARGET=kobo update
-#      - name: Rename for nightly
-#        run: |
-#          cp koreader-kobo-*.zip koreader-kobo-latest-nightly.zip || true
-#          cp koreader-kobo-*.targz koreader-kobo-latest-nightly.targz || true
-#      - uses: actions/upload-artifact@v4
-#        with:
-#          name: kobo
-#          path: |
-#            koreader-kobo-latest-nightly.zip
-#            koreader-kobo-latest-nightly.targz
-#            koreader-*.tar.xz
+  kobo:
+    name: Kobo
+    needs: check-changes
+    if: "needs.check-changes.outputs.should_build == 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.build_kobo == 'true')"
+    runs-on: ubuntu-latest
+    container:
+      image: koreader/kokobo:latest
+    env:
+      BASH_ENV: /home/ko/.bashrc
+      TARGET: kobo
+      RELEASE_TAG: ${{ needs.check-changes.outputs.nightly_version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch submodules
+        run: make fetchthirdparty
+      - name: Build
+        run: make TARGET=kobo
+      - name: Package
+        run: make TARGET=kobo update
+      - name: Rename for nightly
+        run: |
+          cp koreader-kobo-*.zip koreader-kobo-latest-nightly.zip || true
+          cp koreader-kobo-*.targz koreader-kobo-latest-nightly.targz || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kobo
+          path: |
+            koreader-kobo-latest-nightly.zip
+            koreader-kobo-latest-nightly.targz
+            koreader-*.tar.xz
 
-#  pocketbook:
-#    name: PocketBook
-#    needs: check-changes
-#    if: "needs.check-changes.outputs.should_build == 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.build_pocketbook == 'true')"
-#    runs-on: ubuntu-latest
-#    container:
-#      image: koreader/kopb:latest
-#    env:
-#      BASH_ENV: /home/ko/.bashrc
-#      TARGET: pocketbook
-#      RELEASE_TAG: ${{ needs.check-changes.outputs.nightly_version }}
-#    steps:
-#      - uses: actions/checkout@v4
-#        with:
-#          fetch-depth: 0
-#      - name: Fetch submodules
-#        run: make fetchthirdparty
-#      - name: Build
-#        run: make TARGET=pocketbook
-#      - name: Package
-#        run: make TARGET=pocketbook update
-#      - name: Rename for nightly
-#        run: |
-#          cp koreader-pocketbook-*.zip koreader-pocketbook-latest-nightly.zip || true
-#          cp koreader-pocketbook-*.targz koreader-pocketbook-latest-nightly.targz || true
-#      - uses: actions/upload-artifact@v4
-#        with:
-#          name: pocketbook
-#          path: |
-#            koreader-pocketbook-latest-nightly.zip
-#            koreader-pocketbook-latest-nightly.targz
-#            koreader-*.tar.xz
+  pocketbook:
+    name: PocketBook
+    needs: check-changes
+    if: "needs.check-changes.outputs.should_build == 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.build_pocketbook == 'true')"
+    runs-on: ubuntu-latest
+    container:
+      image: koreader/kopb:latest
+    env:
+      BASH_ENV: /home/ko/.bashrc
+      TARGET: pocketbook
+      RELEASE_TAG: ${{ needs.check-changes.outputs.nightly_version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch submodules
+        run: make fetchthirdparty
+      - name: Build
+        run: make TARGET=pocketbook
+      - name: Package
+        run: make TARGET=pocketbook update
+      - name: Rename for nightly
+        run: |
+          cp koreader-pocketbook-*.zip koreader-pocketbook-latest-nightly.zip || true
+          cp koreader-pocketbook-*.targz koreader-pocketbook-latest-nightly.targz || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pocketbook
+          path: |
+            koreader-pocketbook-latest-nightly.zip
+            koreader-pocketbook-latest-nightly.targz
+            koreader-*.tar.xz
 
-#  android-arm:
-#    name: Android (ARM)
-#    needs: check-changes
-#    if: needs.check-changes.outputs.should_build == 'true'
-#    runs-on: ubuntu-latest
-#    container:
-#      image: koreader/koandroid:latest
-#    env:
-#      BASH_ENV: /home/ko/.bashrc
-#      TARGET: android
-#      ANDROID_ARCH: arm
-#      RELEASE_TAG: ${{ needs.check-changes.outputs.nightly_version }}
-#    steps:
-#      - uses: actions/checkout@v4
-#        with:
-#          fetch-depth: 0
-#      - name: Fetch submodules
-#        run: make fetchthirdparty
-#      - name: Build
-#        run: make TARGET=android
-#      - name: Package
-#        run: make TARGET=android update
-#      - name: Sign APK (debug keystore)
-#        run: |
-#          KEYSTORE=/tmp/debug.keystore
-#          if [ ! -f "$KEYSTORE" ]; then
-#            keytool -genkeypair -v \
-#              -keystore "$KEYSTORE" -storepass android -alias androiddebugkey \
-#              -keypass android -keyalg RSA -keysize 2048 -validity 10000 \
-#              -dname "CN=Android Debug,O=Android,C=US"
-#          fi
-#          APKSIGNER=$(find "${ANDROID_HOME}/build-tools" -name apksigner | sort -V | tail -1)
-#          "${APKSIGNER}" sign \
-#            --ks "$KEYSTORE" \
-#            --ks-pass "pass:android" \
-#            --key-pass "pass:android" \
-#            --ks-key-alias "androiddebugkey" \
-#            koreader-android-*.apk
-#          rm -f "$KEYSTORE"
-#      - name: Rename for nightly
-#        run: cp koreader-android-*.apk koreader-android-latest-nightly.apk 2>/dev/null || \
-#             cp koreader-android-*.zip koreader-android-latest-nightly.zip 2>/dev/null || true
-#      - uses: actions/upload-artifact@v4
-#        with:
-#          name: android-arm
-#          path: koreader-android-latest-nightly.*
+  android-arm:
+    name: Android (ARM)
+    needs: check-changes
+    if: needs.check-changes.outputs.should_build == 'true'
+    runs-on: ubuntu-latest
+    container:
+      image: koreader/koandroid:latest
+    env:
+      BASH_ENV: /home/ko/.bashrc
+      TARGET: android
+      ANDROID_ARCH: arm
+      RELEASE_TAG: ${{ needs.check-changes.outputs.nightly_version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch submodules
+        run: make fetchthirdparty
+      - name: Build
+        run: make TARGET=android
+      - name: Package
+        run: make TARGET=android update
+      - name: Sign APK (debug keystore)
+        run: |
+          KEYSTORE=/tmp/debug.keystore
+          if [ ! -f "$KEYSTORE" ]; then
+            keytool -genkeypair -v \
+              -keystore "$KEYSTORE" -storepass android -alias androiddebugkey \
+              -keypass android -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
+          APKSIGNER=$(find "${ANDROID_HOME}/build-tools" -name apksigner | sort -V | tail -1)
+          "${APKSIGNER}" sign \
+            --ks "$KEYSTORE" \
+            --ks-pass "pass:android" \
+            --key-pass "pass:android" \
+            --ks-key-alias "androiddebugkey" \
+            koreader-android-*.apk
+          rm -f "$KEYSTORE"
+      - name: Rename for nightly
+        run: cp koreader-android-*.apk koreader-android-latest-nightly.apk 2>/dev/null || \
+             cp koreader-android-*.zip koreader-android-latest-nightly.zip 2>/dev/null || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-arm
+          path: koreader-android-latest-nightly.*
 
-#  android-arm64:
-#    name: Android (ARM64)
-#    needs: check-changes
-#    if: needs.check-changes.outputs.should_build == 'true'
-#    runs-on: ubuntu-latest
-#    container:
-#      image: koreader/koandroid:latest
-#    env:
-#      BASH_ENV: /home/ko/.bashrc
-#      TARGET: android
-#      ANDROID_ARCH: arm64
-#      RELEASE_TAG: ${{ needs.check-changes.outputs.nightly_version }}
-#    steps:
-#      - uses: actions/checkout@v4
-#        with:
-#          fetch-depth: 0
-#      - name: Fetch submodules
-#        run: make fetchthirdparty
-#      - name: Build
-#        run: make TARGET=android ANDROID_ARCH=arm64
-#      - name: Package
-#        run: make TARGET=android ANDROID_ARCH=arm64 update
-#      - name: Sign APK (debug keystore)
-#        run: |
-#          KEYSTORE=/tmp/debug.keystore
-#          if [ ! -f "$KEYSTORE" ]; then
-#            keytool -genkeypair -v \
-#              -keystore "$KEYSTORE" -storepass android -alias androiddebugkey \
-#              -keypass android -keyalg RSA -keysize 2048 -validity 10000 \
-#              -dname "CN=Android Debug,O=Android,C=US"
-#          fi
-#          APKSIGNER=$(find "${ANDROID_HOME}/build-tools" -name apksigner | sort -V | tail -1)
-#          "${APKSIGNER}" sign \
-#            --ks "$KEYSTORE" \
-#            --ks-pass "pass:android" \
-#            --key-pass "pass:android" \
-#            --ks-key-alias "androiddebugkey" \
-#            koreader-android-*.apk
-#          rm -f "$KEYSTORE"
-#      - name: Rename for nightly
-#        run: cp koreader-android-arm64-*.apk koreader-android-arm64-latest-nightly.apk || true
-#      - uses: actions/upload-artifact@v4
-#        with:
-#          name: android-arm64
-#          path: koreader-android-arm64-latest-nightly.apk
+  android-arm64:
+    name: Android (ARM64)
+    needs: check-changes
+    if: needs.check-changes.outputs.should_build == 'true'
+    runs-on: ubuntu-latest
+    container:
+      image: koreader/koandroid:latest
+    env:
+      BASH_ENV: /home/ko/.bashrc
+      TARGET: android
+      ANDROID_ARCH: arm64
+      RELEASE_TAG: ${{ needs.check-changes.outputs.nightly_version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch submodules
+        run: make fetchthirdparty
+      - name: Build
+        run: make TARGET=android ANDROID_ARCH=arm64
+      - name: Package
+        run: make TARGET=android ANDROID_ARCH=arm64 update
+      - name: Sign APK (debug keystore)
+        run: |
+          KEYSTORE=/tmp/debug.keystore
+          if [ ! -f "$KEYSTORE" ]; then
+            keytool -genkeypair -v \
+              -keystore "$KEYSTORE" -storepass android -alias androiddebugkey \
+              -keypass android -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
+          APKSIGNER=$(find "${ANDROID_HOME}/build-tools" -name apksigner | sort -V | tail -1)
+          "${APKSIGNER}" sign \
+            --ks "$KEYSTORE" \
+            --ks-pass "pass:android" \
+            --key-pass "pass:android" \
+            --ks-key-alias "androiddebugkey" \
+            koreader-android-*.apk
+          rm -f "$KEYSTORE"
+      - name: Rename for nightly
+        run: cp koreader-android-arm64-*.apk koreader-android-arm64-latest-nightly.apk || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-arm64
+          path: koreader-android-arm64-latest-nightly.apk
